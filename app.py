@@ -98,7 +98,7 @@ if not df_grouped.empty:  # Verifica se há dados
         tooltip=["MesAno", "Peso"]
     )
     linha_peso = base_peso.mark_line(point=True, color='cyan').properties(height=500)  # Linha com pontos
-    rotulos_peso = adicionar_rotulos(base_peso, "Peso", formato=",")  # Adiciona rótulos
+    rotulos_peso = adicionar_rotulos(base_peso, "Peso", formato=",.0f")  # Adiciona rótulos
     st.altair_chart(configure_black_background(linha_peso + rotulos_peso), use_container_width=True)  # Exibe gráfico
 else:
     st.warning("Nenhum dado disponível para o período selecionado.")  # Aviso caso não haja dados
