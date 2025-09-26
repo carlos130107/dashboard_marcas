@@ -123,7 +123,7 @@ def configure_black_background(chart):
     return chart.configure_axis(labelColor='white', titleColor='white')\
                 .configure_legend(labelColor='white', titleColor='white')\
                 .configure_title(color='white')\
-                .configure_view(strokeWidth=0, fill='None')
+                .configure_view(strokeWidth=0, fill='#0e1117')
 
 # FUNÇÃO PARA ADICIONAR RÓTULOS
 def adicionar_rotulos(chart, campo, formato="{:,}", cor="white", tamanho=14):
