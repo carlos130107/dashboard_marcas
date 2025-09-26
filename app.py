@@ -19,6 +19,20 @@ st.markdown("""
         /* Sidebar */
         section[data-testid="stSidebar"] {
             background-color: #1a1d23;
+            color: white;
+        }
+
+        /* Inputs e selectbox */
+        div[data-baseweb="select"] > div {
+            background-color: #1a1d23;
+            color: white;
+        }
+        div[data-baseweb="input"] {
+            background-color: #1a1d23;
+            color: white;
+        }
+        div[data-baseweb="select"] span {
+            color: white !important;
         }
 
         /* DataFrame */
@@ -32,8 +46,8 @@ st.markdown("""
             color: white;
         }
 
-        /* Labels de filtro */
-        label, .css-16idsys, .css-1offfwp, .stSelectbox label {
+        /* Labels */
+        label, .stSelectbox label {
             color: white !important;
         }
     </style>
