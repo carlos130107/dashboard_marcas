@@ -70,7 +70,7 @@ def configure_black_background(chart):
 
 # FUNÇÃO PARA ADICIONAR RÓTULOS
 def adicionar_rotulos(chart, campo, formato="{:,}", cor="white", tamanho=14):
-    # Adiciona rótulos acima dos pontos do gráfico
+
     return chart.mark_text(
         align='center',
         baseline='bottom',  # evita que o texto saia do gráfico
@@ -90,7 +90,7 @@ if not df_grouped.empty:  # Verifica se há dados
         tooltip=["MesAno", "Peso"]  # Tooltip ao passar o mouse
     )
     linha_peso = base_peso.mark_line(point=True, color='cyan').properties(height=500)  # Linha com pontos
-    rotulos_peso = adicionar_rotulos(base_peso, "Peso", formato=",")  # Adiciona rótulos
+    rotulos_peso = adicionar_rotulos(base_peso, "Peso", formato=";,0f")  # Adiciona rótulos
     st.altair_chart(configure_black_background(linha_peso + rotulos_peso), use_container_width=True)  # Exibe gráfico
 else:
     st.warning("Nenhum dado disponível para o período selecionado.")  # Aviso caso não haja dados
@@ -104,7 +104,7 @@ if not df_grouped.empty:
         tooltip=["MesAno", "Faturamento"]  # Tooltip
     )
     linha_fat = base_fat.mark_line(point=True, color='lime').properties(height=500)  # Linha com pontos
-    rotulos_fat = adicionar_rotulos(base_fat, "Faturamento", formato="$,.2f", cor="white")  # Rótulos formatados como moeda
+    rotulos_fat = adicionar_rotulos(base_fat, "Faturamento", formato="$,.0f", cor="white")  # Rótulos formatados como moeda
     st.altair_chart(configure_black_background(linha_fat + rotulos_fat), use_container_width=True)  # Exibe gráfico
 else:
     st.warning("Nenhum dado disponível para o período selecionado.")  # Aviso caso não haja dados
