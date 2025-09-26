@@ -85,9 +85,9 @@ def adicionar_rotulos(chart, campo, formato="{:,}", cor="white", tamanho=14):
 st.subheader("📈 Evolução do Peso")  # Subtítulo do gráfico de peso
 if not df_grouped.empty:  # Verifica se há dados
     base_peso = alt.Chart(df_grouped).encode(
-        x=alt.X("MesAnoOrd:T", title="Mês/Ano", axis=alt.Axis(format="%b/%Y")),  # Eixo X
-        y=alt.Y("Peso:Q", scale=alt.Scale(domain=[df_grouped["Peso"].min()*0.95, df_grouped["Peso"].max()*1.05])),  # Eixo Y
-        tooltip=["MesAno", "Peso"]  # Tooltip ao passar o mouse
+        x=alt.X("MesAno:N", title="Mês/Ano", sort=df_grouped["MesAnoOrd"].tolist()),  # Usa o texto formatado
+        y=alt.Y("Peso:Q", scale=alt.Scale(domain=[df_grouped["Peso"].min() * 0.95, df_grouped["Peso"].max() * 1.05])),
+        tooltip=["MesAno", "Peso"]
     )
     linha_peso = base_peso.mark_line(point=True, color='cyan').properties(height=500)  # Linha com pontos
     rotulos_peso = adicionar_rotulos(base_peso, "Peso", formato=",")  # Adiciona rótulos
@@ -99,9 +99,10 @@ else:
 st.subheader("💰 Evolução do Faturamento")  # Subtítulo do gráfico de faturamento
 if not df_grouped.empty:
     base_fat = alt.Chart(df_grouped).encode(
-        x=alt.X("MesAnoOrd:T", title="Mês/Ano", axis=alt.Axis(format="%b/%Y")),  # Eixo X
-        y=alt.Y("Faturamento:Q", scale=alt.Scale(domain=[df_grouped["Faturamento"].min()*0.95, df_grouped["Faturamento"].max()*1.05])),  # Eixo Y
-        tooltip=["MesAno", "Faturamento"]  # Tooltip
+        x=alt.X("MesAno:N", title="Mês/Ano", sort=df_grouped["MesAnoOrd"].tolist()),
+        y=alt.Y("Faturamento:Q", scale=alt.Scale(
+            domain=[df_grouped["Faturamento"].min() * 0.95, df_grouped["Faturamento"].max() * 1.05])),
+        tooltip=["MesAno", "Faturamento"]
     )
     linha_fat = base_fat.mark_line(point=True, color='lime').properties(height=500)  # Linha com pontos
     rotulos_fat = adicionar_rotulos(base_fat, "Faturamento", formato="$,.0f", cor="white")  # Rótulos formatados como moeda
