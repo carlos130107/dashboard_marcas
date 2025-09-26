@@ -6,8 +6,16 @@ import altair as alt  # Biblioteca para visualização de dados
 st.set_page_config(page_title="Análise das Marcas", layout="wide")
 st.title("📊 Análise das Marcas")
 
+# LISTA DE ABAS DISPONÍVEIS NO ARQUIVO
+arquivo = "dados.xlsx"
+abas = pd.ExcelFile(arquivo).sheet_names  # Pega todos os nomes das abas
+
+# SELECIONAR MARCA NA SIDEBAR
+st.sidebar.header("Selecione a Marca")
+marca_selecionada = st.sidebar.selectbox("Marca", abas, index=0)
+
 # CARREGAMENTO E TRATAMENTO DE DADOS
-df = pd.read_excel("dados.xlsx", sheet_name="Bem Brasil")
+df = pd.read_excel(arquivo, sheet_name=marca_selecionada)
 
 # Renomear colunas para nomes mais legíveis
 df.rename(columns={
@@ -29,13 +37,13 @@ df["MesAnoOrd"] = df["Periodo"].dt.to_period("M").dt.to_timestamp()
 df["MesAno"] = df["Periodo"].dt.strftime("%b/%Y")
 
 # --- SIDEBAR DE FILTROS ---
-st.sidebar.header("Filtros")  # Cabeçalho da barra lateral
+st.sidebar.header("Filtros")
 
 # Função para criar filtros do tipo selectbox
 def filtro_selectbox(coluna, df_input):
-    opcoes = ["Todos"] + df_input[coluna].dropna().unique().tolist()  # Adiciona opção "Todos"
-    selecao = st.sidebar.selectbox(coluna, opcoes)  # Cria o selectbox no sidebar
-    return df_input if selecao == "Todos" else df_input[df_input[coluna] == selecao]  # Filtra o dataframe
+    opcoes = ["Todos"] + df_input[coluna].dropna().unique().tolist()
+    selecao = st.sidebar.selectbox(coluna, opcoes)
+    return df_input if selecao == "Todos" else df_input[df_input[coluna] == selecao]
 
 # Aplica filtros para Gerente, Supervisor e Representante
 df_filtrado = filtro_selectbox("Gerente", df)
@@ -43,9 +51,9 @@ df_filtrado = filtro_selectbox("Supervisor", df_filtrado)
 df_filtrado = filtro_selectbox("Representante", df_filtrado)
 
 # Filtro de meses
-meses = df[["MesAnoOrd", "MesAno"]].drop_duplicates().sort_values("MesAnoOrd")  # Lista de meses únicos
-mes_inicio = st.sidebar.selectbox("Mês inicial", meses["MesAno"].tolist(), index=0)  # Seleção de mês inicial
-mes_fim = st.sidebar.selectbox("Mês final", meses["MesAno"].tolist(), index=len(meses)-1)  # Seleção de mês final
+meses = df[["MesAnoOrd", "MesAno"]].drop_duplicates().sort_values("MesAnoOrd")
+mes_inicio = st.sidebar.selectbox("Mês inicial", meses["MesAno"].tolist(), index=0)
+mes_fim = st.sidebar.selectbox("Mês final", meses["MesAno"].tolist(), index=len(meses)-1)
 
 # Converte meses selecionados para timestamps
 inicio_ord = meses.loc[meses["MesAno"] == mes_inicio, "MesAnoOrd"].iloc[0]
@@ -62,7 +70,6 @@ df_grouped = df_filtrado.groupby(["MesAnoOrd", "MesAno"], as_index=False).agg({
 
 # FUNÇÃO PARA CONFIGURAÇÃO DE GRÁFICOS ALT
 def configure_black_background(chart):
-    # Configura cores e estilo do gráfico para fundo preto
     return chart.configure_axis(labelColor='white', titleColor='white')\
                 .configure_legend(labelColor='white', titleColor='white')\
                 .configure_title(color='white')\
@@ -70,11 +77,10 @@ def configure_black_background(chart):
 
 # FUNÇÃO PARA ADICIONAR RÓTULOS
 def adicionar_rotulos(chart, campo, formato="{:,}", cor="white", tamanho=14):
-
     return chart.mark_text(
         align='center',
-        baseline='bottom',  # evita que o texto saia do gráfico
-        dy=-10,  # deslocamento vertical
+        baseline='bottom',
+        dy=-10,
         size=tamanho,
         color=cor
     ).encode(
@@ -82,14 +88,14 @@ def adicionar_rotulos(chart, campo, formato="{:,}", cor="white", tamanho=14):
     )
 
 # --- GRÁFICO DE PESO ---
-st.subheader("📈 Evolução do Peso")  # Subtítulo do gráfico de peso
-if not df_grouped.empty:  # Verifica se há dados
+st.subheader("📈 Evolução do Peso")
+if not df_grouped.empty:
     base_peso = alt.Chart(df_grouped).encode(
         x=alt.X(
             "MesAno:N",
             title="Mês/Ano",
             sort=df_grouped["MesAnoOrd"].tolist(),
-            axis=alt.Axis(labelAngle=0)  # deixa os rótulos retos
+            axis=alt.Axis(labelAngle=0)
         ),
         y=alt.Y(
             "Peso:Q",
@@ -97,21 +103,21 @@ if not df_grouped.empty:  # Verifica se há dados
         ),
         tooltip=["MesAno", "Peso"]
     )
-    linha_peso = base_peso.mark_line(point=True, color='cyan').properties(height=500)  # Linha com pontos
-    rotulos_peso = adicionar_rotulos(base_peso, "Peso", formato=",.0f")  # Adiciona rótulos
-    st.altair_chart(configure_black_background(linha_peso + rotulos_peso), use_container_width=True)  # Exibe gráfico
+    linha_peso = base_peso.mark_line(point=True, color='cyan').properties(height=500)
+    rotulos_peso = adicionar_rotulos(base_peso, "Peso", formato=",.0f")
+    st.altair_chart(configure_black_background(linha_peso + rotulos_peso), use_container_width=True)
 else:
-    st.warning("Nenhum dado disponível para o período selecionado.")  # Aviso caso não haja dados
+    st.warning("Nenhum dado disponível para o período selecionado.")
 
 # --- GRÁFICO DE FATURAMENTO ---
-st.subheader("💰 Evolução do Faturamento")  # Subtítulo do gráfico de faturamento
+st.subheader("💰 Evolução do Faturamento")
 if not df_grouped.empty:
     base_fat = alt.Chart(df_grouped).encode(
         x=alt.X(
             "MesAno:N",
             title="Mês/Ano",
             sort=df_grouped["MesAnoOrd"].tolist(),
-            axis=alt.Axis(labelAngle=0)  # deixa os rótulos retos
+            axis=alt.Axis(labelAngle=0)
         ),
         y=alt.Y(
             "Faturamento:Q",
@@ -120,18 +126,20 @@ if not df_grouped.empty:
         ),
         tooltip=["MesAno", "Faturamento"]
     )
-    linha_fat = base_fat.mark_line(point=True, color='lime').properties(height=500)  # Linha com pontos
-    rotulos_fat = adicionar_rotulos(base_fat, "Faturamento", formato="$,.0f", cor="white")  # Rótulos formatados como moeda
-    st.altair_chart(configure_black_background(linha_fat + rotulos_fat), use_container_width=True)  # Exibe gráfico
+    linha_fat = base_fat.mark_line(point=True, color='lime').properties(height=500)
+    rotulos_fat = adicionar_rotulos(base_fat, "Faturamento", formato="$,.0f", cor="white")
+    st.altair_chart(configure_black_background(linha_fat + rotulos_fat), use_container_width=True)
 else:
-    st.warning("Nenhum dado disponível para o período selecionado.")  # Aviso caso não haja dados
+    st.warning("Nenhum dado disponível para o período selecionado.")
 
 # --- TABELA RESUMO ---
-st.subheader("📋 Resumo dos Dados")  # Subtítulo da tabela
+st.subheader("📋 Resumo dos Dados")
 if not df_grouped.empty:
-    df_display = df_grouped.copy()  # Copia dataframe para exibição
-    df_display["Peso"] = df_display["Peso"].map(lambda x: f"{x:,.0f} kg")  # Formata Peso
-    df_display["Faturamento"] = df_display["Faturamento"].map(lambda x: f"R$ {x:,.0f}")  # Formata Faturamento
-    df_display = df_display[["MesAno", "Peso", "Faturamento"]]  # Seleciona colunas para exibição
-    df_display.columns = ["Mês/Ano", "Peso Total", "Faturamento Total"]  # Renomeia colunas
-    st.dataframe(df_display, use_container_width=True)  # Exibe tabela interativa
+    df_display = df_grouped.copy()
+    df_display["Peso"] = df_display["Peso"].map(lambda x: f"{x:,.0f} kg")
+    df_display["Faturamento"] = df_display["Faturamento"].map(lambda x: f"R$ {x:,.0f}")
+    df_display = df_display[["MesAno", "Peso", "Faturamento"]]
+    df_display.columns = ["Mês/Ano", "Peso Total", "Faturamento Total"]
+    st.dataframe(df_display, use_container_width=True)
+else:
+    st.warning("Nenhum dado para exibir na tabela.")
