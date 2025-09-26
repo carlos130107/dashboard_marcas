@@ -4,6 +4,42 @@ import altair as alt  # Biblioteca para visualização de dados
 
 # CONFIGURAÇÕES DA PÁGINA
 st.set_page_config(page_title="Análise das Marcas", layout="wide")
+# CONFIGURAÇÕES DA PÁGINA
+st.set_page_config(page_title="Análise das Marcas", layout="wide")
+
+# --- CSS PARA FUNDO ESCURO ---
+st.markdown("""
+    <style>
+        /* Fundo geral */
+        .stApp {
+            background-color: #0e1117;
+            color: white;
+        }
+
+        /* Sidebar */
+        section[data-testid="stSidebar"] {
+            background-color: #1a1d23;
+        }
+
+        /* DataFrame */
+        .dataframe {
+            color: white !important;
+            background-color: #1a1d23 !important;
+        }
+
+        /* Headers */
+        h1, h2, h3, h4, h5, h6 {
+            color: white;
+        }
+
+        /* Labels de filtro */
+        label, .css-16idsys, .css-1offfwp, .stSelectbox label {
+            color: white !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# TÍTULO
 st.title("📊 Análise das Marcas")
 
 # LISTA DE ABAS DISPONÍVEIS NO ARQUIVO
