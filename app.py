@@ -1,53 +1,53 @@
-import streamlit as st  # Biblioteca para criar dashboards interativos
-import pandas as pd  # Biblioteca para manipulação de dados
-import altair as alt  # Biblioteca para visualização de dados
+import streamlit as st
+import pandas as pd
+import altair as alt
 
 # CONFIGURAÇÕES DA PÁGINA
 st.set_page_config(page_title="Análise das Marcas", layout="wide")
-# CONFIGURAÇÕES DA PÁGINA
-st.set_page_config(page_title="Análise das Marcas", layout="wide")
 
-# --- CSS PARA FUNDO ESCURO ---
+# --- CSS PARA FUNDO ESCURO GLOBAL ---
 st.markdown("""
     <style>
-        /* Fundo geral */
+        /* Fundo geral da página */
         .stApp {
-            background-color: #0e1117;
-            color: white;
+            background-color: #0e1117 !important;
+            color: white !important;
         }
 
         /* Sidebar */
         section[data-testid="stSidebar"] {
-            background-color: #1a1d23;
-            color: white;
+            background-color: #1a1d23 !important;
+            color: white !important;
         }
 
-        /* Inputs e selectbox */
-        div[data-baseweb="select"] > div {
-            background-color: #1a1d23;
-            color: white;
-        }
-        div[data-baseweb="input"] {
-            background-color: #1a1d23;
-            color: white;
+        /* Inputs, selectbox e filtros */
+        div[data-baseweb="select"] > div, div[data-baseweb="input"] {
+            background-color: #1a1d23 !important;
+            color: white !important;
         }
         div[data-baseweb="select"] span {
             color: white !important;
         }
 
-        /* DataFrame */
+        /* Labels de filtro */
+        label, .stSelectbox label {
+            color: white !important;
+        }
+
+        /* Tabela / DataFrame */
         .dataframe {
             color: white !important;
             background-color: #1a1d23 !important;
         }
 
-        /* Headers */
+        /* Cabeçalhos */
         h1, h2, h3, h4, h5, h6 {
-            color: white;
+            color: white !important;
         }
 
-        /* Labels */
-        label, .stSelectbox label {
+        /* Tooltips */
+        div[role="tooltip"] {
+            background-color: #1a1d23 !important;
             color: white !important;
         }
     </style>
@@ -58,16 +58,15 @@ st.title("📊 Análise das Marcas")
 
 # LISTA DE ABAS DISPONÍVEIS NO ARQUIVO
 arquivo = "dados.xlsx"
-abas = pd.ExcelFile(arquivo).sheet_names  # Pega todos os nomes das abas
+abas = pd.ExcelFile(arquivo).sheet_names
 
-# SELECIONAR MARCA NA SIDEBAR
+# SELEÇÃO DE MARCA
 st.sidebar.header("Selecione a Marca")
 marca_selecionada = st.sidebar.selectbox("Marca", abas, index=0)
 
-# CARREGAMENTO E TRATAMENTO DE DADOS
+# CARREGAMENTO DE DADOS
 df = pd.read_excel(arquivo, sheet_name=marca_selecionada)
 
-# Renomear colunas para nomes mais legíveis
 df.rename(columns={
     df.columns[0]: "Gerente",
     df.columns[2]: "Representante",
@@ -77,48 +76,37 @@ df.rename(columns={
     df.columns[7]: "Supervisor"
 }, inplace=True)
 
-# Converte a coluna Periodo para datetime
 df["Periodo"] = pd.to_datetime(df["Periodo"], errors="coerce")
-
-# Cria coluna para ordenação por mês/ano
 df["MesAnoOrd"] = df["Periodo"].dt.to_period("M").dt.to_timestamp()
-
-# Cria coluna com mês/ano formatado como texto
 df["MesAno"] = df["Periodo"].dt.strftime("%b/%Y")
 
-# --- SIDEBAR DE FILTROS ---
+# SIDEBAR DE FILTROS
 st.sidebar.header("Filtros")
 
-# Função para criar filtros do tipo selectbox
 def filtro_selectbox(coluna, df_input):
     opcoes = ["Todos"] + df_input[coluna].dropna().unique().tolist()
     selecao = st.sidebar.selectbox(coluna, opcoes)
     return df_input if selecao == "Todos" else df_input[df_input[coluna] == selecao]
 
-# Aplica filtros para Gerente, Supervisor e Representante
 df_filtrado = filtro_selectbox("Gerente", df)
 df_filtrado = filtro_selectbox("Supervisor", df_filtrado)
 df_filtrado = filtro_selectbox("Representante", df_filtrado)
 
-# Filtro de meses
 meses = df[["MesAnoOrd", "MesAno"]].drop_duplicates().sort_values("MesAnoOrd")
 mes_inicio = st.sidebar.selectbox("Mês inicial", meses["MesAno"].tolist(), index=0)
 mes_fim = st.sidebar.selectbox("Mês final", meses["MesAno"].tolist(), index=len(meses)-1)
 
-# Converte meses selecionados para timestamps
 inicio_ord = meses.loc[meses["MesAno"] == mes_inicio, "MesAnoOrd"].iloc[0]
 fim_ord = meses.loc[meses["MesAno"] == mes_fim, "MesAnoOrd"].iloc[0]
 
-# Aplica filtro de intervalo de datas
 df_filtrado = df_filtrado[(df_filtrado["MesAnoOrd"] >= inicio_ord) & (df_filtrado["MesAnoOrd"] <= fim_ord)]
 
-# Agrupamento por mês, somando Peso e Faturamento
 df_grouped = df_filtrado.groupby(["MesAnoOrd", "MesAno"], as_index=False).agg({
     "Peso": "sum",
     "Faturamento": "sum"
 }).sort_values("MesAnoOrd")
 
-# FUNÇÃO PARA CONFIGURAÇÃO DE GRÁFICOS ALT
+# FUNÇÃO PARA CONFIGURAR GRÁFICOS ALT
 def configure_black_background(chart):
     return chart.configure_axis(labelColor='white', titleColor='white')\
                 .configure_legend(labelColor='white', titleColor='white')\
@@ -137,7 +125,7 @@ def adicionar_rotulos(chart, campo, formato="{:,}", cor="white", tamanho=14):
         text=alt.Text(campo, format=formato)
     )
 
-# --- GRÁFICO DE PESO ---
+# GRÁFICO DE PESO
 st.subheader("📈 Evolução do Peso")
 if not df_grouped.empty:
     base_peso = alt.Chart(df_grouped).encode(
@@ -145,7 +133,7 @@ if not df_grouped.empty:
             "MesAno:N",
             title="Mês/Ano",
             sort=df_grouped["MesAnoOrd"].tolist(),
-            axis=alt.Axis(labelAngle=0)
+            axis=alt.Axis(labelAngle=0, labelColor="white", titleColor="white")
         ),
         y=alt.Y(
             "Peso:Q",
@@ -159,7 +147,7 @@ if not df_grouped.empty:
 else:
     st.warning("Nenhum dado disponível para o período selecionado.")
 
-# --- GRÁFICO DE FATURAMENTO ---
+# GRÁFICO DE FATURAMENTO
 st.subheader("💰 Evolução do Faturamento")
 if not df_grouped.empty:
     base_fat = alt.Chart(df_grouped).encode(
@@ -167,7 +155,7 @@ if not df_grouped.empty:
             "MesAno:N",
             title="Mês/Ano",
             sort=df_grouped["MesAnoOrd"].tolist(),
-            axis=alt.Axis(labelAngle=0)
+            axis=alt.Axis(labelAngle=0, labelColor="white", titleColor="white")
         ),
         y=alt.Y(
             "Faturamento:Q",
@@ -182,7 +170,7 @@ if not df_grouped.empty:
 else:
     st.warning("Nenhum dado disponível para o período selecionado.")
 
-# --- TABELA RESUMO ---
+# TABELA RESUMO
 st.subheader("📋 Resumo dos Dados")
 if not df_grouped.empty:
     df_display = df_grouped.copy()
