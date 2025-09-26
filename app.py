@@ -8,71 +8,64 @@ st.set_page_config(page_title="Análise das Marcas", layout="wide")
 # --- CSS PARA DARK MODE COMPLETO ---
 st.markdown("""
     <style>
-        /* Fundo geral da página */
-        .stApp {
-            background-color: #0e1117 !important;
-            color: white !important;
-        }
-
-        /* Sidebar */
-        section[data-testid="stSidebar"] {
-            background-color: #1a1d23 !important;
-            color: white !important;
-        }
-
-        /* Widgets - selectbox, inputs, filtros */
+        .stApp { background-color: #0e1117 !important; color: white !important; }
+        section[data-testid="stSidebar"] { background-color: #1a1d23 !important; color: white !important; }
         div[data-baseweb="select"] > div, div[data-baseweb="input"], div.stSelectbox {
-            background-color: #1a1d23 !important;
-            color: white !important;
+            background-color: #1a1d23 !important; color: white !important;
         }
-        div[data-baseweb="select"] span {
-            color: white !important;
-        }
-
-        /* Labels */
-        label, .stSelectbox label {
-            color: white !important;
-        }
-
-        /* DataFrame */
-        .dataframe {
-            color: white !important;
-            background-color: #1a1d23 !important;
-        }
-
-        /* Cabeçalhos */
-        h1, h2, h3, h4, h5, h6 {
-            color: white !important;
-        }
-
-        /* Tooltips dos gráficos */
-        div[role="tooltip"] {
-            background-color: #1a1d23 !important;
-            color: white !important;
-        }
-
-        /* Scrollbars */
-        ::-webkit-scrollbar {
-            background: #0e1117;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #555;
-        }
+        div[data-baseweb="select"] span { color: white !important; }
+        label, .stSelectbox label { color: white !important; }
+        .dataframe { color: white !important; background-color: #1a1d23 !important; }
+        h1, h2, h3, h4, h5, h6 { color: white !important; }
+        div[role="tooltip"] { background-color: #1a1d23 !important; color: white !important; }
+        ::-webkit-scrollbar { background: #0e1117; }
+        ::-webkit-scrollbar-thumb { background: #555; }
     </style>
 """, unsafe_allow_html=True)
 
-# TÍTULO
-st.title("📊 Análise das Marcas")
-
-# LISTA DE ABAS DISPONÍVEIS NO ARQUIVO
+# ========================
+# CARREGAR DADOS INICIAIS
+# ========================
 arquivo = "dados.xlsx"
 abas = pd.ExcelFile(arquivo).sheet_names
+
+# Usar a primeira aba só para descobrir os gerentes existentes
+df_tmp = pd.read_excel(arquivo, sheet_name=abas[0])
+df_tmp.rename(columns={
+    df_tmp.columns[0]: "Gerente"
+}, inplace=True)
+
+gerentes_unicos = df_tmp["Gerente"].dropna().unique().tolist()
+
+# Criar dicionário de usuários dinamicamente (senha = nome minúsculo + "123")
+usuarios = {}
+for g in gerentes_unicos:
+    usuarios[g.lower()] = {"senha": g.lower() + "123", "nome": g}
+
+# ========================
+# LOGIN
+# ========================
+st.sidebar.title("🔒 Login")
+usuario = st.sidebar.text_input("Usuário (nome do gerente):")
+senha = st.sidebar.text_input("Senha:", type="password")
+
+if usuario not in usuarios or usuarios[usuario]["senha"] != senha:
+    st.warning("Faça login com seu usuário e senha (ex: joao / joao123).")
+    st.stop()
+
+gerente_logado = usuarios[usuario]["nome"]
+st.sidebar.success(f"Bem-vindo(a), {gerente_logado}!")
+
+# ========================
+# DASHBOARD
+# ========================
+st.title("📊 Análise das Marcas")
 
 # SELEÇÃO DE MARCA
 st.sidebar.header("Selecione a Marca")
 marca_selecionada = st.sidebar.selectbox("Marca", abas, index=0)
 
-# CARREGAMENTO DE DADOS
+# CARREGAMENTO DE DADOS DA ABA SELECIONADA
 df = pd.read_excel(arquivo, sheet_name=marca_selecionada)
 
 df.rename(columns={
@@ -88,6 +81,9 @@ df["Periodo"] = pd.to_datetime(df["Periodo"], errors="coerce")
 df["MesAnoOrd"] = df["Periodo"].dt.to_period("M").dt.to_timestamp()
 df["MesAno"] = df["Periodo"].dt.strftime("%b/%Y")
 
+# 🔒 FILTRAR PELO GERENTE LOGADO
+df = df[df["Gerente"] == gerente_logado]
+
 # SIDEBAR DE FILTROS
 st.sidebar.header("Filtros")
 
@@ -96,25 +92,30 @@ def filtro_selectbox(coluna, df_input):
     selecao = st.sidebar.selectbox(coluna, opcoes)
     return df_input if selecao == "Todos" else df_input[df_input[coluna] == selecao]
 
-df_filtrado = filtro_selectbox("Gerente", df)
-df_filtrado = filtro_selectbox("Supervisor", df_filtrado)
+df_filtrado = filtro_selectbox("Supervisor", df)
 df_filtrado = filtro_selectbox("Representante", df_filtrado)
 
 meses = df[["MesAnoOrd", "MesAno"]].drop_duplicates().sort_values("MesAnoOrd")
-mes_inicio = st.sidebar.selectbox("Mês inicial", meses["MesAno"].tolist(), index=0)
-mes_fim = st.sidebar.selectbox("Mês final", meses["MesAno"].tolist(), index=len(meses)-1)
+if not meses.empty:
+    mes_inicio = st.sidebar.selectbox("Mês inicial", meses["MesAno"].tolist(), index=0)
+    mes_fim = st.sidebar.selectbox("Mês final", meses["MesAno"].tolist(), index=len(meses)-1)
 
-inicio_ord = meses.loc[meses["MesAno"] == mes_inicio, "MesAnoOrd"].iloc[0]
-fim_ord = meses.loc[meses["MesAno"] == mes_fim, "MesAnoOrd"].iloc[0]
+    inicio_ord = meses.loc[meses["MesAno"] == mes_inicio, "MesAnoOrd"].iloc[0]
+    fim_ord = meses.loc[meses["MesAno"] == mes_fim, "MesAnoOrd"].iloc[0]
 
-df_filtrado = df_filtrado[(df_filtrado["MesAnoOrd"] >= inicio_ord) & (df_filtrado["MesAnoOrd"] <= fim_ord)]
+    df_filtrado = df_filtrado[(df_filtrado["MesAnoOrd"] >= inicio_ord) & (df_filtrado["MesAnoOrd"] <= fim_ord)]
+else:
+    st.warning("Nenhum período disponível para este gerente.")
+    st.stop()
 
 df_grouped = df_filtrado.groupby(["MesAnoOrd", "MesAno"], as_index=False).agg({
     "Peso": "sum",
     "Faturamento": "sum"
 }).sort_values("MesAnoOrd")
 
-# FUNÇÃO PARA CONFIGURAÇÃO DE GRÁFICOS ALT (fundo fixo escuro)
+# ========================
+# FUNÇÕES DE GRÁFICOS
+# ========================
 def configure_black_background(chart):
     return chart.configure_axis(
                 labelColor='white',
@@ -127,10 +128,9 @@ def configure_black_background(chart):
             .configure_title(color='white')\
             .configure_view(
                 strokeWidth=0,
-                fill='#0e1117'  # Fundo escuro fixo
+                fill='#0e1117'
             )
 
-# FUNÇÃO PARA ADICIONAR RÓTULOS
 def adicionar_rotulos(chart, campo, formato="{:,}", cor="white", tamanho=14):
     return chart.mark_text(
         align='center',
@@ -142,7 +142,9 @@ def adicionar_rotulos(chart, campo, formato="{:,}", cor="white", tamanho=14):
         text=alt.Text(campo, format=formato)
     )
 
+# ========================
 # GRÁFICO DE PESO
+# ========================
 st.subheader("📈 Evolução do Peso")
 if not df_grouped.empty:
     base_peso = alt.Chart(df_grouped).encode(
@@ -164,7 +166,9 @@ if not df_grouped.empty:
 else:
     st.warning("Nenhum dado disponível para o período selecionado.")
 
+# ========================
 # GRÁFICO DE FATURAMENTO
+# ========================
 st.subheader("💰 Evolução do Faturamento")
 if not df_grouped.empty:
     base_fat = alt.Chart(df_grouped).encode(
@@ -187,7 +191,9 @@ if not df_grouped.empty:
 else:
     st.warning("Nenhum dado disponível para o período selecionado.")
 
+# ========================
 # TABELA RESUMO
+# ========================
 st.subheader("📋 Resumo dos Dados")
 if not df_grouped.empty:
     df_display = df_grouped.copy()
