@@ -5,7 +5,7 @@ import altair as alt
 # CONFIGURAÇÕES DA PÁGINA
 st.set_page_config(page_title="Análise das Marcas", layout="wide")
 
-# --- CSS PARA FUNDO ESCURO GLOBAL ---
+# --- CSS PARA DARK MODE COMPLETO ---
 st.markdown("""
     <style>
         /* Fundo geral da página */
@@ -20,8 +20,8 @@ st.markdown("""
             color: white !important;
         }
 
-        /* Inputs, selectbox e filtros */
-        div[data-baseweb="select"] > div, div[data-baseweb="input"] {
+        /* Widgets - selectbox, inputs, filtros */
+        div[data-baseweb="select"] > div, div[data-baseweb="input"], div.stSelectbox {
             background-color: #1a1d23 !important;
             color: white !important;
         }
@@ -29,12 +29,12 @@ st.markdown("""
             color: white !important;
         }
 
-        /* Labels de filtro */
+        /* Labels */
         label, .stSelectbox label {
             color: white !important;
         }
 
-        /* Tabela / DataFrame */
+        /* DataFrame */
         .dataframe {
             color: white !important;
             background-color: #1a1d23 !important;
@@ -45,10 +45,18 @@ st.markdown("""
             color: white !important;
         }
 
-        /* Tooltips */
+        /* Tooltips dos gráficos */
         div[role="tooltip"] {
             background-color: #1a1d23 !important;
             color: white !important;
+        }
+
+        /* Scrollbars */
+        ::-webkit-scrollbar {
+            background: #0e1117;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #555;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -106,12 +114,21 @@ df_grouped = df_filtrado.groupby(["MesAnoOrd", "MesAno"], as_index=False).agg({
     "Faturamento": "sum"
 }).sort_values("MesAnoOrd")
 
-# FUNÇÃO PARA CONFIGURAR GRÁFICOS ALT
+# FUNÇÃO PARA CONFIGURAÇÃO DE GRÁFICOS ALT (fundo fixo escuro)
 def configure_black_background(chart):
-    return chart.configure_axis(labelColor='white', titleColor='white')\
-                .configure_legend(labelColor='white', titleColor='white')\
-                .configure_title(color='white')\
-                .configure_view(strokeWidth=0, fill='#0e1117')
+    return chart.configure_axis(
+                labelColor='white',
+                titleColor='white'
+            )\
+            .configure_legend(
+                labelColor='white',
+                titleColor='white'
+            )\
+            .configure_title(color='white')\
+            .configure_view(
+                strokeWidth=0,
+                fill='#0e1117'  # Fundo escuro fixo
+            )
 
 # FUNÇÃO PARA ADICIONAR RÓTULOS
 def adicionar_rotulos(chart, campo, formato="{:,}", cor="white", tamanho=14):
