@@ -131,7 +131,7 @@ st.subheader("📋 Resumo dos Dados")  # Subtítulo da tabela
 if not df_grouped.empty:
     df_display = df_grouped.copy()  # Copia dataframe para exibição
     df_display["Peso"] = df_display["Peso"].map(lambda x: f"{x:,.0f} kg")  # Formata Peso
-    df_display["Faturamento"] = df_display["Faturamento"].map(lambda x: f"R$ {x:,.2f}")  # Formata Faturamento
+    df_display["Faturamento"] = df_display["Faturamento"].map(lambda x: f"R$ {x:,.0f}")  # Formata Faturamento
     df_display = df_display[["MesAno", "Peso", "Faturamento"]]  # Seleciona colunas para exibição
     df_display.columns = ["Mês/Ano", "Peso Total", "Faturamento Total"]  # Renomeia colunas
     st.dataframe(df_display, use_container_width=True)  # Exibe tabela interativa
