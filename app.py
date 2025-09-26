@@ -2,12 +2,12 @@ import streamlit as st  # Biblioteca para criar dashboards interativos
 import pandas as pd  # Biblioteca para manipulação de dados
 import altair as alt  # Biblioteca para visualização de dados
 
-# --- CONFIGURAÇÕES DA PÁGINA ---
-st.set_page_config(page_title="Análise das Marcas", layout="wide")  # Define título e layout da página
-st.title("📊 Análise das Marcas")  # Adiciona título principal ao dashboard
+# CONFIGURAÇÕES DA PÁGINA
+st.set_page_config(page_title="Análise das Marcas", layout="wide")
+st.title("📊 Análise das Marcas")
 
-# --- CARREGAMENTO E TRATAMENTO DE DADOS ---
-df = pd.read_excel("dados.xlsx", sheet_name="Bem Brasil")  # Carrega os dados do Excel
+# CARREGAMENTO E TRATAMENTO DE DADOS
+df = pd.read_excel("dados.xlsx", sheet_name="Bem Brasil")
 
 # Renomear colunas para nomes mais legíveis
 df.rename(columns={
@@ -60,21 +60,22 @@ df_grouped = df_filtrado.groupby(["MesAnoOrd", "MesAno"], as_index=False).agg({
     "Faturamento": "sum"
 }).sort_values("MesAnoOrd")
 
-# --- FUNÇÃO PARA CONFIGURAÇÃO DE GRÁFICOS ALT ---
+# FUNÇÃO PARA CONFIGURAÇÃO DE GRÁFICOS ALT
 def configure_black_background(chart):
     # Configura cores e estilo do gráfico para fundo preto
     return chart.configure_axis(labelColor='white', titleColor='white')\
                 .configure_legend(labelColor='white', titleColor='white')\
                 .configure_title(color='white')\
-                .configure_view(strokeWidth=0, fill='black')
+                .configure_view(strokeWidth=0, fill='None')
 
-# --- FUNÇÃO PARA ADICIONAR RÓTULOS ---
-def adicionar_rotulos(chart, campo, formato="{:,}", cor="white"):
+# FUNÇÃO PARA ADICIONAR RÓTULOS
+def adicionar_rotulos(chart, campo, formato="{:,}", cor="white", tamanho=14):
     # Adiciona rótulos acima dos pontos do gráfico
     return chart.mark_text(
         align='center',
         baseline='bottom',  # evita que o texto saia do gráfico
-        dy=-5,  # deslocamento vertical
+        dy=-10,  # deslocamento vertical
+        size=tamanho,
         color=cor
     ).encode(
         text=alt.Text(campo, format=formato)
