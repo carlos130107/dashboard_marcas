@@ -8,6 +8,7 @@ st.set_page_config(page_title="Análise das Marcas", layout="wide")
 # --- CSS PARA DARK MODE COMPLETO ---
 st.markdown("""
     <style>
+        /* Seu CSS aqui (mantido igual) */
         .stApp {
             background-color: #0e1117 !important;
             color: white !important;
@@ -46,120 +47,91 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Dicionário de usuários e senhas baseado nos nomes da coluna "Nome Ger/Sup"
-usuarios = {
-    "ADRIANO CHEPERNATE LAUREANO - ACL": "senhaAdriano123",
-    "DENNIS ROBERTO MERCURIO": "senhaDennis123",
-    "CLAUDINEI DA SILVA": "senhaClaudinei123",
-    "GILBERTO JOSÉ OBERZINER": "senhaGilberto123",
-    "KLEBER SOUZA": "senhaKleber123",
-    "ENIO CARDOSO": "senhaEnio123",
-    "RODRIGO ESTEVAM LOBO": "senhaLobo123",
-    "ROGER MARCELINO": "senhaRoger123"
-}
+# --- CARREGAR DADOS PARA GERAR USUÁRIOS E SENHAS ---
 
-# Usar session_state para manter login
-if "autenticado" not in st.session_state:
-    st.session_state.autenticado = False
-if "usuario" not in st.session_state:
-    st.session_state.usuario = ""
-
-# Login na sidebar
-st.sidebar.header("Login do Gerente")
-
-if not st.session_state.autenticado:
-    usuario_input = st.sidebar.text_input("Nome completo do gerente")
-    senha_input = st.sidebar.text_input("Senha", type="password")
-    botao_login = st.sidebar.button("Entrar")
-
-    if botao_login:
-        if usuario_input in usuarios and senha_input == usuarios[usuario_input]:
-            st.session_state.autenticado = True
-            st.session_state.usuario = usuario_input
-            st.sidebar.success(f"Bem-vindo, {usuario_input}!")
-        else:
-            st.sidebar.error("Usuário ou senha incorretos.")
-else:
-    st.sidebar.success(f"Logado como: {st.session_state.usuario}")
-    if st.sidebar.button("Sair"):
-        st.session_state.autenticado = False
-        st.session_state.usuario = ""
-        st.experimental_rerun()
-
-if not st.session_state.autenticado:
-    st.warning("Por favor, faça login para acessar os dados.")
-    st.stop()
-
-usuario_input = st.session_state.usuario
-
-# TÍTULO
-st.title("📊 Análise das Marcas")
-
-# LISTA DE ABAS DISPONÍVEIS NO ARQUIVO
 arquivo = "dados.xlsx"
 abas = pd.ExcelFile(arquivo).sheet_names
 
-# SELEÇÃO DE MARCA
+# Para gerar usuários e senhas, vamos carregar a primeira aba (ou a aba padrão)
+# e extrair os nomes dos gerentes
+df_usuarios = pd.read_excel(arquivo, sheet_name=abas[0])
+
+# Renomear colunas para garantir que "Nome Gerente" exista
+df_usuarios.rename(columns={
+    df_usuarios.columns[0]: "Gerente",
+    df_usuarios.columns[1]: "Nome Gerente",
+    df_usuarios.columns[2]: "Representante",
+    df_usuarios.columns[3]: "Periodo",
+    df_usuarios.columns[5]: "Peso",
+    df_usuarios.columns[6]: "Faturamento",
+    df_usuarios.columns[7]: "Supervisor"
+}, inplace=True)
+
+# Extrair nomes únicos dos gerentes
+nomes_gerentes = df_usuarios["Nome Gerente"].dropna().unique()
+
+# Criar dicionário de usuários e senhas
+# Exemplo simples: usuário = nome do gerente sem espaços, senha = nome do gerente minúsculo + "123"
+usuarios = {}
+for nome in nomes_gerentes:
+    usuario = nome.replace(" ", "")  # remove espaços para usuário
+    senha = nome.lower().replace(" ", "") + "123"  # senha simples, pode ser alterada
+    usuarios[usuario] = senha
+
+# --- LOGIN NA SIDEBAR ---
+st.sidebar.header("Login do Gerente")
+usuario_input = st.sidebar.text_input("Usuário")
+senha_input = st.sidebar.text_input("Senha", type="password")
+botao_login = st.sidebar.button("Entrar")
+
+autenticado = False
+
+if botao_login:
+    if usuario_input in usuarios and senha_input == usuarios[usuario_input]:
+        autenticado = True
+        st.sidebar.success(f"Bem-vindo, {usuario_input}!")
+    else:
+        st.sidebar.error("Usuário ou senha incorretos.")
+
+if not autenticado:
+    st.warning("Por favor, faça login para acessar os dados.")
+    st.stop()
+
+# --- APÓS LOGIN, CARREGAR DADOS DA MARCA SELECIONADA ---
+
+st.title("📊 Análise das Marcas")
+
 st.sidebar.header("Selecione a Marca")
 marca_selecionada = st.sidebar.selectbox("Marca", abas, index=0)
 
-# CARREGAMENTO DE DADOS
 df = pd.read_excel(arquivo, sheet_name=marca_selecionada)
 
-# Função para encontrar colunas por palavras-chave (mais robusto)
-def find_col(df, keywords):
-    for col in df.columns:
-        for k in keywords:
-            if k.lower() in col.lower():
-                return col
-    return None
+df.rename(columns={
+    df.columns[0]: "Gerente",
+    df.columns[1]: "Nome Gerente",
+    df.columns[2]: "Representante",
+    df.columns[3]: "Periodo",
+    df.columns[5]: "Peso",
+    df.columns[6]: "Faturamento",
+    df.columns[7]: "Supervisor"
+}, inplace=True)
 
-# Renomear a coluna do gerente para "Nome Ger/Sup" se necessário
-nome_ger_col = find_col(df, ['nome ger/sup', 'gerente', 'ger/sup', 'gerente/supervisor'])
-if nome_ger_col:
-    df.rename(columns={nome_ger_col: 'Nome Ger/Sup'}, inplace=True)
-else:
-    st.error("Coluna 'Nome Ger/Sup' não encontrada no arquivo. Verifique o Excel.")
+# Agora, para filtrar os dados do gerente autenticado, precisamos mapear o usuário para o nome do gerente
+# Como o usuário é o nome do gerente sem espaços, vamos buscar o nome original correspondente
+# Criar um mapeamento reverso para encontrar o nome original do gerente a partir do usuário
+usuario_para_nome = {nome.replace(" ", ""): nome for nome in nomes_gerentes}
+
+nome_gerente_autenticado = usuario_para_nome.get(usuario_input)
+
+if nome_gerente_autenticado is None:
+    st.error("Erro: gerente não encontrado.")
     st.stop()
 
-# Converter para string e limpar espaços
-df['Nome Ger/Sup'] = df['Nome Ger/Sup'].astype(str).str.strip()
+# Filtrar dados para mostrar só o gerente autenticado (usando "Nome Gerente")
+df = df[df["Nome Gerente"] == nome_gerente_autenticado]
 
-# Renomear outras colunas importantes
-mappings = {}
-rep_col = find_col(df, ['represent', 'representa', 'represen'])
-if rep_col:
-    mappings[rep_col] = 'Representante'
-periodo_col = find_col(df, ['periodo', 'data', 'mês'])
-if periodo_col:
-    mappings[periodo_col] = 'Periodo'
-peso_col = find_col(df, ['peso'])
-if peso_col:
-    mappings[peso_col] = 'Peso'
-fat_col = find_col(df, ['fatur', 'faturamento', 'receita'])
-if fat_col:
-    mappings[fat_col] = 'Faturamento'
-sup_col = find_col(df, ['supervisor', 'sup'])
-if sup_col:
-    mappings[sup_col] = 'Supervisor'
+# Continuar com o processamento e visualização dos dados...
 
-if mappings:
-    df.rename(columns=mappings, inplace=True)
-
-# Verificar colunas obrigatórias
-for c in ['Periodo', 'Peso', 'Faturamento']:
-    if c not in df.columns:
-        st.error(f"Coluna obrigatória '{c}' não encontrada — colunas detectadas: {', '.join(df.columns)}")
-        st.stop()
-
-# Filtrar dados para mostrar só o gerente autenticado
-df = df[df["Nome Ger/Sup"] == usuario_input]
-
-if df.empty:
-    st.warning("Nenhum dado encontrado para o gerente autenticado.")
-    st.stop()
-
-# Processar datas
 df["Periodo"] = pd.to_datetime(df["Periodo"], errors="coerce")
 df["MesAnoOrd"] = df["Periodo"].dt.to_period("M").dt.to_timestamp()
 df["MesAno"] = df["Periodo"].dt.strftime("%b/%Y")
@@ -168,36 +140,26 @@ df["MesAno"] = df["Periodo"].dt.strftime("%b/%Y")
 st.sidebar.header("Filtros")
 
 def filtro_selectbox(coluna, df_input):
-    opcoes = ["Todos"] + sorted(df_input[coluna].dropna().unique().tolist())
+    opcoes = ["Todos"] + df_input[coluna].dropna().unique().tolist()
     selecao = st.sidebar.selectbox(coluna, opcoes)
     return df_input if selecao == "Todos" else df_input[df_input[coluna] == selecao]
 
-df_filtrado = df
-if "Nome Ger/Sup" in df.columns:
-    df_filtrado = filtro_selectbox("Nome Ger/Sup", df_filtrado)
-if "Supervisor" in df.columns:
-    df_filtrado = filtro_selectbox("Supervisor", df_filtrado)
-if "Representante" in df_filtrado.columns:
-    df_filtrado = filtro_selectbox("Representante", df_filtrado)
+# O filtro de "Gerente" não faz sentido aqui, pois só tem um gerente (autenticado)
+# Então, não vamos mostrar filtro para "Gerente"
+df_filtrado = df.copy()
+df_filtrado = filtro_selectbox("Supervisor", df_filtrado)
+df_filtrado = filtro_selectbox("Representante", df_filtrado)
 
-meses = df_filtrado[["MesAnoOrd", "MesAno"]].drop_duplicates().sort_values("MesAnoOrd")
-
+meses = df[["MesAnoOrd", "MesAno"]].drop_duplicates().sort_values("MesAnoOrd")
 if meses.empty:
-    st.warning("Nenhum dado disponível para os filtros selecionados.")
+    st.warning("Nenhum dado disponível para o gerente autenticado.")
     st.stop()
 
 mes_inicio = st.sidebar.selectbox("Mês inicial", meses["MesAno"].tolist(), index=0)
 mes_fim = st.sidebar.selectbox("Mês final", meses["MesAno"].tolist(), index=len(meses)-1)
 
-inicio_ord = meses.loc[meses["MesAno"] == mes_inicio, "MesAnoOrd"]
-fim_ord = meses.loc[meses["MesAno"] == mes_fim, "MesAnoOrd"]
-
-if inicio_ord.empty or fim_ord.empty:
-    st.warning("Seleção de mês inválida.")
-    st.stop()
-
-inicio_ord = inicio_ord.iloc[0]
-fim_ord = fim_ord.iloc[0]
+inicio_ord = meses.loc[meses["MesAno"] == mes_inicio, "MesAnoOrd"].iloc[0]
+fim_ord = meses.loc[meses["MesAno"] == mes_fim, "MesAnoOrd"].iloc[0]
 
 df_filtrado = df_filtrado[(df_filtrado["MesAnoOrd"] >= inicio_ord) & (df_filtrado["MesAnoOrd"] <= fim_ord)]
 
@@ -206,7 +168,7 @@ df_grouped = df_filtrado.groupby(["MesAnoOrd", "MesAno"], as_index=False).agg({
     "Faturamento": "sum"
 }).sort_values("MesAnoOrd")
 
-# Funções para gráficos Altair com fundo escuro
+# Funções para gráficos e visualização (mantidas iguais)
 def configure_black_background(chart):
     return chart.configure_axis(
                 labelColor='white',
@@ -233,7 +195,7 @@ def adicionar_rotulos(chart, campo, formato="{:,}", cor="white", tamanho=14):
         text=alt.Text(campo, format=formato)
     )
 
-# Gráfico de Peso
+# Gráfico Peso
 st.subheader("📈 Evolução do Peso")
 if not df_grouped.empty:
     base_peso = alt.Chart(df_grouped).encode(
@@ -255,7 +217,7 @@ if not df_grouped.empty:
 else:
     st.warning("Nenhum dado disponível para o período selecionado.")
 
-# Gráfico de Faturamento
+# Gráfico Faturamento
 st.subheader("💰 Evolução do Faturamento")
 if not df_grouped.empty:
     base_fat = alt.Chart(df_grouped).encode(
@@ -278,7 +240,7 @@ if not df_grouped.empty:
 else:
     st.warning("Nenhum dado disponível para o período selecionado.")
 
-# Tabela Resumo
+# Tabela resumo
 st.subheader("📋 Resumo dos Dados")
 if not df_grouped.empty:
     df_display = df_grouped.copy()
