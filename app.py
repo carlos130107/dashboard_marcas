@@ -46,14 +46,16 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Dicionário de usuários e senhas (exemplo) - ajuste conforme necessário
+# Dicionário de usuários e senhas baseado nos nomes da coluna "Nome Ger/Sup"
 usuarios = {
-    "15843": "15843!claudinei",
-    "18182": "18182!enio",
-    "19399": "19399!roger",
-    "15972": "15972!gilberto",
-    "18519": "18519!lobo",
-    "15810": "15810!dennis"
+    "ADRIANO CHEPERNATE LAUREANO - ACL": "senhaAdriano123",
+    "DENNIS ROBERTO MERCURIO": "senhaDennis123",
+    "CLAUDINEI DA SILVA": "senhaClaudinei123",
+    "GILBERTO JOSÉ OBERZINER": "senhaGilberto123",
+    "KLEBER SOUZA": "senhaKleber123",
+    "ENIO CARDOSO": "senhaEnio123",
+    "RODRIGO ESTEVAM LOBO": "senhaLobo123",
+    "ROGER MARCELINO": "senhaRoger123"
 }
 
 # Usar session_state para manter login
@@ -66,7 +68,7 @@ if "usuario" not in st.session_state:
 st.sidebar.header("Login do Gerente")
 
 if not st.session_state.autenticado:
-    usuario_input = st.sidebar.text_input("Usuário")
+    usuario_input = st.sidebar.text_input("Nome completo do gerente")
     senha_input = st.sidebar.text_input("Senha", type="password")
     botao_login = st.sidebar.button("Entrar")
 
@@ -112,18 +114,18 @@ def find_col(df, keywords):
                 return col
     return None
 
-# Renomear colunas principais para nomes padrão
-if 'Gerente' not in df.columns:
-    candidate = find_col(df, ['gerente', 'ger/'])
-    if candidate:
-        df.rename(columns={candidate: 'Gerente'}, inplace=True)
-
-if 'Gerente' not in df.columns:
-    st.error("Coluna 'Gerente' não encontrada no arquivo. Verifique o Excel.")
+# Renomear a coluna do gerente para "Nome Ger/Sup" se necessário
+nome_ger_col = find_col(df, ['nome ger/sup', 'gerente', 'ger/sup', 'gerente/supervisor'])
+if nome_ger_col:
+    df.rename(columns={nome_ger_col: 'Nome Ger/Sup'}, inplace=True)
+else:
+    st.error("Coluna 'Nome Ger/Sup' não encontrada no arquivo. Verifique o Excel.")
     st.stop()
 
-df['Gerente'] = df['Gerente'].astype(str).str.strip()
+# Converter para string e limpar espaços
+df['Nome Ger/Sup'] = df['Nome Ger/Sup'].astype(str).str.strip()
 
+# Renomear outras colunas importantes
 mappings = {}
 rep_col = find_col(df, ['represent', 'representa', 'represen'])
 if rep_col:
@@ -150,13 +152,14 @@ for c in ['Periodo', 'Peso', 'Faturamento']:
         st.error(f"Coluna obrigatória '{c}' não encontrada — colunas detectadas: {', '.join(df.columns)}")
         st.stop()
 
-# Filtrar dados para o gerente autenticado
-df = df[df["Gerente"] == usuario_input]
+# Filtrar dados para mostrar só o gerente autenticado
+df = df[df["Nome Ger/Sup"] == usuario_input]
 
 if df.empty:
     st.warning("Nenhum dado encontrado para o gerente autenticado.")
     st.stop()
 
+# Processar datas
 df["Periodo"] = pd.to_datetime(df["Periodo"], errors="coerce")
 df["MesAnoOrd"] = df["Periodo"].dt.to_period("M").dt.to_timestamp()
 df["MesAno"] = df["Periodo"].dt.strftime("%b/%Y")
@@ -170,8 +173,8 @@ def filtro_selectbox(coluna, df_input):
     return df_input if selecao == "Todos" else df_input[df_input[coluna] == selecao]
 
 df_filtrado = df
-if "Gerente" in df.columns:
-    df_filtrado = filtro_selectbox("Gerente", df_filtrado)
+if "Nome Ger/Sup" in df.columns:
+    df_filtrado = filtro_selectbox("Nome Ger/Sup", df_filtrado)
 if "Supervisor" in df.columns:
     df_filtrado = filtro_selectbox("Supervisor", df_filtrado)
 if "Representante" in df_filtrado.columns:
