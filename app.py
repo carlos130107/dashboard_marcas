@@ -228,7 +228,7 @@ if not df_grouped.empty:
         x=alt.X(
             "MesAnoOrd:T",
             title="Mês/Ano",
-            axis=alt.Axis(format="%b/%Y", labelAngle=0, labelColor="white", titleColor="white")
+            axis=alt.Axis(format="%b/%Y", labelAngle=0, labelColor="white", titleColor="white", tickCount="month")
         ),
         y=alt.Y(
             "Peso:Q",
@@ -251,7 +251,7 @@ if not df_grouped.empty:
         x=alt.X(
             "MesAnoOrd:T",
             title="Mês/Ano",
-            axis=alt.Axis(format="%b/%Y", labelAngle=0, labelColor="white", titleColor="white")
+            axis=alt.Axis(format="%b/%Y", labelAngle=0, labelColor="white", titleColor="white", tickCount="month")
         ),
         y=alt.Y(
             "Faturamento:Q",
@@ -274,7 +274,7 @@ if not df_grouped.empty:
         x=alt.X(
             "MesAnoOrd:T",
             title="Mês/Ano",
-            axis=alt.Axis(format="%b/%Y", labelAngle=0, labelColor="white", titleColor="white")
+            axis=alt.Axis(format="%b/%Y", labelAngle=0, labelColor="white", titleColor="white", tickCount="month")
         ),
         y=alt.Y(
             "Positivações:Q",
