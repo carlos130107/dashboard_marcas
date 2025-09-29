@@ -63,9 +63,12 @@ st.markdown("""
 
 # Dicionário de usuários e senhas (exemplo)
 usuarios = {
-    "Gerente1": "senha1",
-    "Gerente2": "senha2",
-    "Gerente3": "senha3"
+    "15843": "15843!claudinei",
+    "18182": "18182!enio",
+    "19399": "19399!roger",
+    "15972": "15972!gilberto",
+    "18519": "18519!lobo",
+    "15810": "18519!lobo"
 }
 
 # Login na sidebar
