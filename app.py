@@ -81,6 +81,9 @@ for nome in nomes_gerentes:
     senha = nome.lower().replace(" ", "") + "123"  # senha simples, pode ser alterada
     usuarios[usuario] = senha
 
+# Usuário coringa com acesso a todos os dados
+usuarios["admin"] = "admin123"
+
 # --- LOGIN NA SIDEBAR ---
 st.sidebar.header("Login do Gerente")
 usuario_input = st.sidebar.text_input("Usuário")
@@ -124,14 +127,19 @@ df.rename(columns={
 
 # Mapear usuário para nome do gerente original
 usuario_para_nome = {nome.replace(" ", ""): nome for nome in nomes_gerentes}
-nome_gerente_autenticado = usuario_para_nome.get(usuario_autenticado)
 
-if nome_gerente_autenticado is None:
-    st.error("Erro: gerente não encontrado.")
-    st.stop()
+# Se for usuário coringa, não filtra por gerente
+if usuario_autenticado == "admin":
+    nome_gerente_autenticado = None  # sinaliza acesso total
+else:
+    nome_gerente_autenticado = usuario_para_nome.get(usuario_autenticado)
+    if nome_gerente_autenticado is None:
+        st.error("Erro: gerente não encontrado.")
+        st.stop()
 
-# Filtrar dados para mostrar só o gerente autenticado (usando "Nome Gerente")
-df = df[df["Nome Gerente"] == nome_gerente_autenticado]
+# Filtrar dados para mostrar só o gerente autenticado (usando "Nome Gerente"), exceto para admin
+if nome_gerente_autenticado is not None:
+    df = df[df["Nome Gerente"] == nome_gerente_autenticado]
 
 # Converter datas e criar colunas auxiliares
 df["Periodo"] = pd.to_datetime(df["Periodo"], errors="coerce")
