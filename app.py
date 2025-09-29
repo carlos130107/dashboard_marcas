@@ -211,23 +211,33 @@ def adicionar_rotulos(chart, campo, formato="{:,}", cor="white", tamanho=14):
         text=alt.Text(campo, format=formato)
     )
 
+# Função para calcular domínio Y com margem menor para suavizar escala
+def calcular_dominio_y(serie):
+    min_val = serie.min()
+    max_val = serie.max()
+    margem = (max_val - min_val) * 0.05  # 5% de margem
+    if margem == 0:
+        margem = max_val * 0.05 if max_val != 0 else 1
+    return [min_val - margem, max_val + margem]
+
 # Gráfico Peso
 st.subheader("⚖️ Evolução do Peso")
 if not df_grouped.empty:
+    dominio_peso = calcular_dominio_y(df_grouped["Peso"])
     base_peso = alt.Chart(df_grouped).encode(
         x=alt.X(
-            "MesAno:N",
+            "MesAnoOrd:T",
             title="Mês/Ano",
-            sort=df_grouped["MesAnoOrd"].tolist(),
-            axis=alt.Axis(labelAngle=0, labelColor="white", titleColor="white")
+            axis=alt.Axis(format="%b/%Y", labelAngle=0, labelColor="white", titleColor="white")
         ),
         y=alt.Y(
             "Peso:Q",
-            scale=alt.Scale(domain=[df_grouped["Peso"].min() * 0.95, df_grouped["Peso"].max() * 1.05])
+            scale=alt.Scale(domain=dominio_peso),
+            axis=alt.Axis(labelColor="white", titleColor="white")
         ),
         tooltip=["MesAno", "Peso"]
     )
-    linha_peso = base_peso.mark_line(point=True, color='cyan').properties(height=500)
+    linha_peso = base_peso.mark_line(point=True, color='cyan', interpolate='monotone').properties(height=500)
     rotulos_peso = adicionar_rotulos(base_peso, "Peso", formato=",.0f")
     st.altair_chart(configure_black_background(linha_peso + rotulos_peso), use_container_width=True)
 else:
@@ -236,21 +246,21 @@ else:
 # Gráfico Faturamento
 st.subheader("💵 Evolução do Faturamento")
 if not df_grouped.empty:
+    dominio_fat = calcular_dominio_y(df_grouped["Faturamento"])
     base_fat = alt.Chart(df_grouped).encode(
         x=alt.X(
-            "MesAno:N",
+            "MesAnoOrd:T",
             title="Mês/Ano",
-            sort=df_grouped["MesAnoOrd"].tolist(),
-            axis=alt.Axis(labelAngle=0, labelColor="white", titleColor="white")
+            axis=alt.Axis(format="%b/%Y", labelAngle=0, labelColor="white", titleColor="white")
         ),
         y=alt.Y(
             "Faturamento:Q",
-            scale=alt.Scale(domain=[df_grouped["Faturamento"].min() * 0.95,
-                                    df_grouped["Faturamento"].max() * 1.05])
+            scale=alt.Scale(domain=dominio_fat),
+            axis=alt.Axis(labelColor="white", titleColor="white")
         ),
         tooltip=["MesAno", "Faturamento"]
     )
-    linha_fat = base_fat.mark_line(point=True, color='lime').properties(height=500)
+    linha_fat = base_fat.mark_line(point=True, color='lime', interpolate='monotone').properties(height=500)
     rotulos_fat = adicionar_rotulos(base_fat, "Faturamento", formato="$,.0f", cor="white")
     st.altair_chart(configure_black_background(linha_fat + rotulos_fat), use_container_width=True)
 else:
@@ -259,21 +269,21 @@ else:
 # Gráfico Positivações
 st.subheader("🛒 Evolução das Positivações")
 if not df_grouped.empty:
+    dominio_pos = calcular_dominio_y(df_grouped["Positivações"])
     base_pos = alt.Chart(df_grouped).encode(
         x=alt.X(
-            "MesAno:N",
+            "MesAnoOrd:T",
             title="Mês/Ano",
-            sort=df_grouped["MesAnoOrd"].tolist(),
-            axis=alt.Axis(labelAngle=0, labelColor="white", titleColor="white")
+            axis=alt.Axis(format="%b/%Y", labelAngle=0, labelColor="white", titleColor="white")
         ),
         y=alt.Y(
             "Positivações:Q",
-            scale=alt.Scale(domain=[df_grouped["Positivações"].min() * 0.95,
-                                    df_grouped["Positivações"].max() * 1.05])
+            scale=alt.Scale(domain=dominio_pos),
+            axis=alt.Axis(labelColor="white", titleColor="white")
         ),
         tooltip=["MesAno", "Positivações"]
     )
-    linha_pos = base_pos.mark_line(point=True, color='orange').properties(height=500)
+    linha_pos = base_pos.mark_line(point=True, color='orange', interpolate='monotone').properties(height=500)
     rotulos_pos = adicionar_rotulos(base_pos, "Positivações", formato=",.0f", cor="white")
     st.altair_chart(configure_black_background(linha_pos + rotulos_pos), use_container_width=True)
 else:
