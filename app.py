@@ -61,6 +61,33 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Dicionário de usuários e senhas (exemplo)
+usuarios = {
+    "Gerente1": "senha1",
+    "Gerente2": "senha2",
+    "Gerente3": "senha3"
+}
+
+# Login na sidebar
+st.sidebar.header("Login do Gerente")
+usuario_input = st.sidebar.text_input("Usuário")
+senha_input = st.sidebar.text_input("Senha", type="password")
+botao_login = st.sidebar.button("Entrar")
+
+# Variável para controlar autenticação
+autenticado = False
+
+if botao_login:
+    if usuario_input in usuarios and senha_input == usuarios[usuario_input]:
+        autenticado = True
+        st.sidebar.success(f"Bem-vindo, {usuario_input}!")
+    else:
+        st.sidebar.error("Usuário ou senha incorretos.")
+
+if not autenticado:
+    st.warning("Por favor, faça login para acessar os dados.")
+    st.stop()  # Para não mostrar o restante da aplicação sem login
+
 # TÍTULO
 st.title("📊 Análise das Marcas")
 
@@ -84,6 +111,9 @@ df.rename(columns={
     df.columns[7]: "Supervisor"
 }, inplace=True)
 
+# Filtrar dados para mostrar só o gerente autenticado
+df = df[df["Gerente"] == usuario_input]
+
 df["Periodo"] = pd.to_datetime(df["Periodo"], errors="coerce")
 df["MesAnoOrd"] = df["Periodo"].dt.to_period("M").dt.to_timestamp()
 df["MesAno"] = df["Periodo"].dt.strftime("%b/%Y")
@@ -96,7 +126,7 @@ def filtro_selectbox(coluna, df_input):
     selecao = st.sidebar.selectbox(coluna, opcoes)
     return df_input if selecao == "Todos" else df_input[df_input[coluna] == selecao]
 
-df_filtrado = filtro_selectbox("Gerente", df)
+df_filtrado = filtro_selectbox("Gerente", df)  # Só terá o gerente autenticado
 df_filtrado = filtro_selectbox("Supervisor", df_filtrado)
 df_filtrado = filtro_selectbox("Representante", df_filtrado)
 
