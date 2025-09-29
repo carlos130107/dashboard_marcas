@@ -212,7 +212,7 @@ def adicionar_rotulos(chart, campo, formato="{:,}", cor="white", tamanho=14):
     )
 
 # Gráfico Peso
-st.subheader("📈 Evolução do Peso")
+st.subheader("⚖️ Evolução do Peso")
 if not df_grouped.empty:
     base_peso = alt.Chart(df_grouped).encode(
         x=alt.X(
@@ -234,7 +234,7 @@ else:
     st.warning("Nenhum dado disponível para o período selecionado.")
 
 # Gráfico Faturamento
-st.subheader("💰 Evolução do Faturamento")
+st.subheader("💵 Evolução do Faturamento")
 if not df_grouped.empty:
     base_fat = alt.Chart(df_grouped).encode(
         x=alt.X(
@@ -257,7 +257,7 @@ else:
     st.warning("Nenhum dado disponível para o período selecionado.")
 
 # Gráfico Positivações
-st.subheader("✅ Evolução das Positivações")
+st.subheader("🛒 Evolução das Positivações")
 if not df_grouped.empty:
     base_pos = alt.Chart(df_grouped).encode(
         x=alt.X(
