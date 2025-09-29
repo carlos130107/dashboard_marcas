@@ -163,21 +163,6 @@ if df_filtrado.empty:
     st.warning("Nenhum dado disponível para os filtros selecionados.")
     st.stop()
 
-# Filtros de período
-meses = df_filtrado[["MesAnoOrd", "MesAno"]].drop_duplicates().sort_values("MesAnoOrd")
-
-mes_inicio = st.sidebar.selectbox("Mês inicial", meses["MesAno"].tolist(), index=0)
-mes_fim = st.sidebar.selectbox("Mês final", meses["MesAno"].tolist(), index=len(meses)-1)
-
-inicio_ord = meses.loc[meses["MesAno"] == mes_inicio, "MesAnoOrd"].iloc[0]
-fim_ord = meses.loc[meses["MesAno"] == mes_fim, "MesAnoOrd"].iloc[0]
-
-df_filtrado = df_filtrado[(df_filtrado["MesAnoOrd"] >= inicio_ord) & (df_filtrado["MesAnoOrd"] <= fim_ord)]
-
-if df_filtrado.empty:
-    st.warning("Nenhum dado disponível para o período selecionado.")
-    st.stop()
-
 # Agrupar dados para gráficos e tabela
 df_grouped = df_filtrado.groupby(["MesAnoOrd", "MesAno"], as_index=False).agg({
     "Peso": "sum",
