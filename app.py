@@ -114,6 +114,7 @@ df.rename(columns={
     df.columns[0]: "Gerente",
     df.columns[1]: "Nome Gerente",
     df.columns[2]: "Representante",
+    df.columns[4]: "Positivações",
     df.columns[3]: "Periodo",
     df.columns[5]: "Peso",
     df.columns[6]: "Faturamento",
@@ -166,7 +167,8 @@ if df_filtrado.empty:
 # Agrupar dados para gráficos e tabela
 df_grouped = df_filtrado.groupby(["MesAnoOrd", "MesAno"], as_index=False).agg({
     "Peso": "sum",
-    "Faturamento": "sum"
+    "Faturamento": "sum",
+    "Positivacoes": "sum"
 }).sort_values("MesAnoOrd")
 
 # Funções para gráficos e visualização (mantidas iguais)
@@ -241,14 +243,38 @@ if not df_grouped.empty:
 else:
     st.warning("Nenhum dado disponível para o período selecionado.")
 
+# Gráfico Positivações
+st.subheader("✅ Evolução das Positivações")
+if not df_grouped.empty:
+    base_pos = alt.Chart(df_grouped).encode(
+        x=alt.X(
+            "MesAno:N",
+            title="Mês/Ano",
+            sort=df_grouped["MesAnoOrd"].tolist(),
+            axis=alt.Axis(labelAngle=0, labelColor="white", titleColor="white")
+        ),
+        y=alt.Y(
+            "Positivacoes:Q",
+            scale=alt.Scale(domain=[df_grouped["Positivacoes"].min() * 0.95,
+                                    df_grouped["Positivacoes"].max() * 1.05])
+        ),
+        tooltip=["MesAno", "Positivacoes"]
+    )
+    linha_pos = base_pos.mark_line(point=True, color='orange').properties(height=500)
+    rotulos_pos = adicionar_rotulos(base_pos, "Positivacoes", formato=",.0f", cor="white")
+    st.altair_chart(configure_black_background(linha_pos + rotulos_pos), use_container_width=True)
+else:
+    st.warning("Nenhum dado disponível para o período selecionado.")
+
 # Tabela resumo
 st.subheader("📋 Resumo dos Dados")
 if not df_grouped.empty:
     df_display = df_grouped.copy()
     df_display["Peso"] = df_display["Peso"].map(lambda x: f"{x:,.0f} kg")
     df_display["Faturamento"] = df_display["Faturamento"].map(lambda x: f"R$ {x:,.0f}")
-    df_display = df_display[["MesAno", "Peso", "Faturamento"]]
-    df_display.columns = ["Mês/Ano", "Peso Total", "Faturamento Total"]
+    df_display["Positivacoes"] = df_display["Positivacoes"].map(lambda x: f"{x:,.0f}")
+    df_display = df_display[["MesAno", "Peso", "Faturamento", "Positivacoes"]]
+    df_display.columns = ["Mês/Ano", "Peso Total", "Faturamento Total", "Positivações Totais"]
     st.dataframe(df_display, use_container_width=True)
 else:
     st.warning("Nenhum dado para exibir na tabela.")
