@@ -8,7 +8,6 @@ st.set_page_config(page_title="Análise das Marcas", layout="wide")
 # --- CSS PARA DARK MODE COMPLETO ---
 st.markdown("""
     <style>
-        /* Seu CSS aqui */
         .stApp {
             background-color: #0e1117 !important;
             color: white !important;
@@ -47,15 +46,14 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Dicionário de usuários e senhas (exemplo) - CORRIJA senhas conforme necessário
+# Dicionário de usuários e senhas (exemplo) - ajuste conforme necessário
 usuarios = {
     "15843": "15843!claudinei",
     "18182": "18182!enio",
     "19399": "19399!roger",
     "15972": "15972!gilberto",
     "18519": "18519!lobo",
-    # Corrigi o que parecia um typo aqui:
-    "15810": "15810!lobo"
+    "15810": "15810!dennis"
 }
 
 # Usar session_state para manter login
@@ -106,7 +104,7 @@ marca_selecionada = st.sidebar.selectbox("Marca", abas, index=0)
 # CARREGAMENTO DE DADOS
 df = pd.read_excel(arquivo, sheet_name=marca_selecionada)
 
-# --------- Normalizações / renomeações robustas ----------
+# Função para encontrar colunas por palavras-chave (mais robusto)
 def find_col(df, keywords):
     for col in df.columns:
         for k in keywords:
@@ -114,7 +112,7 @@ def find_col(df, keywords):
                 return col
     return None
 
-# Garantir que existe a coluna 'Gerente' (ou encontrá-la por substring) e converter para string
+# Renomear colunas principais para nomes padrão
 if 'Gerente' not in df.columns:
     candidate = find_col(df, ['gerente', 'ger/'])
     if candidate:
@@ -124,10 +122,8 @@ if 'Gerente' not in df.columns:
     st.error("Coluna 'Gerente' não encontrada no arquivo. Verifique o Excel.")
     st.stop()
 
-# **Importante**: converter para string para evitar mismatch com o input de texto
 df['Gerente'] = df['Gerente'].astype(str).str.strip()
 
-# Renomear outras colunas encontradas (mais robusto que usar positions)
 mappings = {}
 rep_col = find_col(df, ['represent', 'representa', 'represen'])
 if rep_col:
@@ -148,20 +144,19 @@ if sup_col:
 if mappings:
     df.rename(columns=mappings, inplace=True)
 
-# Check colunas mínimas
+# Verificar colunas obrigatórias
 for c in ['Periodo', 'Peso', 'Faturamento']:
     if c not in df.columns:
         st.error(f"Coluna obrigatória '{c}' não encontrada — colunas detectadas: {', '.join(df.columns)}")
         st.stop()
 
-# Filtrar dados para mostrar só o gerente autenticado (agora a comparação é entre strings)
+# Filtrar dados para o gerente autenticado
 df = df[df["Gerente"] == usuario_input]
 
 if df.empty:
     st.warning("Nenhum dado encontrado para o gerente autenticado.")
     st.stop()
 
-# resto do processamento (periodo, agregações e gráficos) inalterado
 df["Periodo"] = pd.to_datetime(df["Periodo"], errors="coerce")
 df["MesAnoOrd"] = df["Periodo"].dt.to_period("M").dt.to_timestamp()
 df["MesAno"] = df["Periodo"].dt.strftime("%b/%Y")
@@ -174,12 +169,9 @@ def filtro_selectbox(coluna, df_input):
     selecao = st.sidebar.selectbox(coluna, opcoes)
     return df_input if selecao == "Todos" else df_input[df_input[coluna] == selecao]
 
-# como o df já foi filtrado pelo gerente autenticado, este select terá apenas opções desse gerente
+df_filtrado = df
 if "Gerente" in df.columns:
-    df_filtrado = filtro_selectbox("Gerente", df)
-else:
-    df_filtrado = df
-
+    df_filtrado = filtro_selectbox("Gerente", df_filtrado)
 if "Supervisor" in df.columns:
     df_filtrado = filtro_selectbox("Supervisor", df_filtrado)
 if "Representante" in df_filtrado.columns:
@@ -194,7 +186,6 @@ if meses.empty:
 mes_inicio = st.sidebar.selectbox("Mês inicial", meses["MesAno"].tolist(), index=0)
 mes_fim = st.sidebar.selectbox("Mês final", meses["MesAno"].tolist(), index=len(meses)-1)
 
-# Garantir que os valores existem antes de pegar iloc[0]
 inicio_ord = meses.loc[meses["MesAno"] == mes_inicio, "MesAnoOrd"]
 fim_ord = meses.loc[meses["MesAno"] == mes_fim, "MesAnoOrd"]
 
@@ -212,7 +203,7 @@ df_grouped = df_filtrado.groupby(["MesAnoOrd", "MesAno"], as_index=False).agg({
     "Faturamento": "sum"
 }).sort_values("MesAnoOrd")
 
-# FUNÇÃO PARA CONFIGURAÇÃO DE GRÁFICOS ALT (fundo fixo escuro)
+# Funções para gráficos Altair com fundo escuro
 def configure_black_background(chart):
     return chart.configure_axis(
                 labelColor='white',
@@ -225,10 +216,9 @@ def configure_black_background(chart):
             .configure_title(color='white')\
             .configure_view(
                 strokeWidth=0,
-                fill='#0e1117'  # Fundo escuro fixo
+                fill='#0e1117'
             )
 
-# FUNÇÃO PARA ADICIONAR RÓTULOS
 def adicionar_rotulos(chart, campo, formato="{:,}", cor="white", tamanho=14):
     return chart.mark_text(
         align='center',
@@ -240,7 +230,7 @@ def adicionar_rotulos(chart, campo, formato="{:,}", cor="white", tamanho=14):
         text=alt.Text(campo, format=formato)
     )
 
-# GRÁFICO DE PESO
+# Gráfico de Peso
 st.subheader("📈 Evolução do Peso")
 if not df_grouped.empty:
     base_peso = alt.Chart(df_grouped).encode(
@@ -262,7 +252,7 @@ if not df_grouped.empty:
 else:
     st.warning("Nenhum dado disponível para o período selecionado.")
 
-# GRÁFICO DE FATURAMENTO
+# Gráfico de Faturamento
 st.subheader("💰 Evolução do Faturamento")
 if not df_grouped.empty:
     base_fat = alt.Chart(df_grouped).encode(
@@ -285,7 +275,7 @@ if not df_grouped.empty:
 else:
     st.warning("Nenhum dado disponível para o período selecionado.")
 
-# TABELA RESUMO
+# Tabela Resumo
 st.subheader("📋 Resumo dos Dados")
 if not df_grouped.empty:
     df_display = df_grouped.copy()
