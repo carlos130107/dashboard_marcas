@@ -116,11 +116,8 @@ df.rename(columns={
     df.columns[7]: "Supervisor"
 }, inplace=True)
 
-# Agora, para filtrar os dados do gerente autenticado, precisamos mapear o usuário para o nome do gerente
-# Como o usuário é o nome do gerente sem espaços, vamos buscar o nome original correspondente
-# Criar um mapeamento reverso para encontrar o nome original do gerente a partir do usuário
+# Mapear usuário para nome do gerente original
 usuario_para_nome = {nome.replace(" ", ""): nome for nome in nomes_gerentes}
-
 nome_gerente_autenticado = usuario_para_nome.get(usuario_input)
 
 if nome_gerente_autenticado is None:
@@ -130,8 +127,7 @@ if nome_gerente_autenticado is None:
 # Filtrar dados para mostrar só o gerente autenticado (usando "Nome Gerente")
 df = df[df["Nome Gerente"] == nome_gerente_autenticado]
 
-# Continuar com o processamento e visualização dos dados...
-
+# Converter datas e criar colunas auxiliares
 df["Periodo"] = pd.to_datetime(df["Periodo"], errors="coerce")
 df["MesAnoOrd"] = df["Periodo"].dt.to_period("M").dt.to_timestamp()
 df["MesAno"] = df["Periodo"].dt.strftime("%b/%Y")
@@ -140,20 +136,31 @@ df["MesAno"] = df["Periodo"].dt.strftime("%b/%Y")
 st.sidebar.header("Filtros")
 
 def filtro_selectbox(coluna, df_input):
-    opcoes = ["Todos"] + df_input[coluna].dropna().unique().tolist()
+    opcoes = ["Todos"] + sorted(df_input[coluna].dropna().unique().tolist())
     selecao = st.sidebar.selectbox(coluna, opcoes)
-    return df_input if selecao == "Todos" else df_input[df_input[coluna] == selecao]
+    if selecao == "Todos":
+        return df_input
+    else:
+        return df_input[df_input[coluna] == selecao]
 
-# O filtro de "Gerente" não faz sentido aqui, pois só tem um gerente (autenticado)
-# Então, não vamos mostrar filtro para "Gerente"
+# Aplicar filtros dentro dos dados do gerente autenticado
 df_filtrado = df.copy()
-df_filtrado = filtro_selectbox("Supervisor", df_filtrado)
-df_filtrado = filtro_selectbox("Representante", df_filtrado)
 
-meses = df[["MesAnoOrd", "MesAno"]].drop_duplicates().sort_values("MesAnoOrd")
-if meses.empty:
-    st.warning("Nenhum dado disponível para o gerente autenticado.")
+# Filtro Supervisor
+if "Supervisor" in df_filtrado.columns and not df_filtrado["Supervisor"].isnull().all():
+    df_filtrado = filtro_selectbox("Supervisor", df_filtrado)
+
+# Filtro Representante
+if "Representante" in df_filtrado.columns and not df_filtrado["Representante"].isnull().all():
+    df_filtrado = filtro_selectbox("Representante", df_filtrado)
+
+# Verificar se após filtros há dados
+if df_filtrado.empty:
+    st.warning("Nenhum dado disponível para os filtros selecionados.")
     st.stop()
+
+# Filtros de período
+meses = df_filtrado[["MesAnoOrd", "MesAno"]].drop_duplicates().sort_values("MesAnoOrd")
 
 mes_inicio = st.sidebar.selectbox("Mês inicial", meses["MesAno"].tolist(), index=0)
 mes_fim = st.sidebar.selectbox("Mês final", meses["MesAno"].tolist(), index=len(meses)-1)
@@ -163,6 +170,11 @@ fim_ord = meses.loc[meses["MesAno"] == mes_fim, "MesAnoOrd"].iloc[0]
 
 df_filtrado = df_filtrado[(df_filtrado["MesAnoOrd"] >= inicio_ord) & (df_filtrado["MesAnoOrd"] <= fim_ord)]
 
+if df_filtrado.empty:
+    st.warning("Nenhum dado disponível para o período selecionado.")
+    st.stop()
+
+# Agrupar dados para gráficos e tabela
 df_grouped = df_filtrado.groupby(["MesAnoOrd", "MesAno"], as_index=False).agg({
     "Peso": "sum",
     "Faturamento": "sum"
