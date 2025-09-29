@@ -47,13 +47,17 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# --- Inicializa estado de autenticação ---
+if "autenticado" not in st.session_state:
+    st.session_state["autenticado"] = False
+    st.session_state["usuario"] = ""
+
 # --- CARREGAR DADOS PARA GERAR USUÁRIOS E SENHAS ---
 
 arquivo = "dados.xlsx"
 abas = pd.ExcelFile(arquivo).sheet_names
 
-# Para gerar usuários e senhas, vamos carregar a primeira aba (ou a aba padrão)
-# e extrair os nomes dos gerentes
+# Carregar a primeira aba para extrair nomes dos gerentes
 df_usuarios = pd.read_excel(arquivo, sheet_name=abas[0])
 
 # Renomear colunas para garantir que "Nome Gerente" exista
@@ -71,7 +75,6 @@ df_usuarios.rename(columns={
 nomes_gerentes = df_usuarios["Nome Gerente"].dropna().unique()
 
 # Criar dicionário de usuários e senhas
-# Exemplo simples: usuário = nome do gerente sem espaços, senha = nome do gerente minúsculo + "123"
 usuarios = {}
 for nome in nomes_gerentes:
     usuario = nome.replace(" ", "")  # remove espaços para usuário
@@ -84,18 +87,19 @@ usuario_input = st.sidebar.text_input("Usuário")
 senha_input = st.sidebar.text_input("Senha", type="password")
 botao_login = st.sidebar.button("Entrar")
 
-autenticado = False
-
 if botao_login:
     if usuario_input in usuarios and senha_input == usuarios[usuario_input]:
-        autenticado = True
+        st.session_state["autenticado"] = True
+        st.session_state["usuario"] = usuario_input
         st.sidebar.success(f"Bem-vindo, {usuario_input}!")
     else:
         st.sidebar.error("Usuário ou senha incorretos.")
 
-if not autenticado:
+if not st.session_state["autenticado"]:
     st.warning("Por favor, faça login para acessar os dados.")
     st.stop()
+
+usuario_autenticado = st.session_state["usuario"]
 
 # --- APÓS LOGIN, CARREGAR DADOS DA MARCA SELECIONADA ---
 
@@ -118,7 +122,7 @@ df.rename(columns={
 
 # Mapear usuário para nome do gerente original
 usuario_para_nome = {nome.replace(" ", ""): nome for nome in nomes_gerentes}
-nome_gerente_autenticado = usuario_para_nome.get(usuario_input)
+nome_gerente_autenticado = usuario_para_nome.get(usuario_autenticado)
 
 if nome_gerente_autenticado is None:
     st.error("Erro: gerente não encontrado.")
