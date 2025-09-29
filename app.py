@@ -110,12 +110,13 @@ marca_selecionada = st.sidebar.selectbox("Marca", abas, index=0)
 
 df = pd.read_excel(arquivo, sheet_name=marca_selecionada)
 
+# Renomear colunas com atenção à posição correta da coluna "Positivações"
 df.rename(columns={
     df.columns[0]: "Gerente",
     df.columns[1]: "Nome Gerente",
     df.columns[2]: "Representante",
-    df.columns[4]: "Positivações",
     df.columns[3]: "Periodo",
+    df.columns[4]: "Positivações",
     df.columns[5]: "Peso",
     df.columns[6]: "Faturamento",
     df.columns[7]: "Supervisor"
@@ -165,10 +166,11 @@ if df_filtrado.empty:
     st.stop()
 
 # Agrupar dados para gráficos e tabela
+# Usar o nome correto da coluna "Positivações"
 df_grouped = df_filtrado.groupby(["MesAnoOrd", "MesAno"], as_index=False).agg({
     "Peso": "sum",
     "Faturamento": "sum",
-    "Positivacoes": "sum"
+    "Positivações": "sum"
 }).sort_values("MesAnoOrd")
 
 # Funções para gráficos e visualização (mantidas iguais)
@@ -254,14 +256,14 @@ if not df_grouped.empty:
             axis=alt.Axis(labelAngle=0, labelColor="white", titleColor="white")
         ),
         y=alt.Y(
-            "Positivacoes:Q",
-            scale=alt.Scale(domain=[df_grouped["Positivacoes"].min() * 0.95,
-                                    df_grouped["Positivacoes"].max() * 1.05])
+            "Positivações:Q",
+            scale=alt.Scale(domain=[df_grouped["Positivações"].min() * 0.95,
+                                    df_grouped["Positivações"].max() * 1.05])
         ),
-        tooltip=["MesAno", "Positivacoes"]
+        tooltip=["MesAno", "Positivações"]
     )
     linha_pos = base_pos.mark_line(point=True, color='orange').properties(height=500)
-    rotulos_pos = adicionar_rotulos(base_pos, "Positivacoes", formato=",.0f", cor="white")
+    rotulos_pos = adicionar_rotulos(base_pos, "Positivações", formato=",.0f", cor="white")
     st.altair_chart(configure_black_background(linha_pos + rotulos_pos), use_container_width=True)
 else:
     st.warning("Nenhum dado disponível para o período selecionado.")
@@ -272,8 +274,8 @@ if not df_grouped.empty:
     df_display = df_grouped.copy()
     df_display["Peso"] = df_display["Peso"].map(lambda x: f"{x:,.0f} kg")
     df_display["Faturamento"] = df_display["Faturamento"].map(lambda x: f"R$ {x:,.0f}")
-    df_display["Positivacoes"] = df_display["Positivacoes"].map(lambda x: f"{x:,.0f}")
-    df_display = df_display[["MesAno", "Peso", "Faturamento", "Positivacoes"]]
+    df_display["Positivações"] = df_display["Positivações"].map(lambda x: f"{x:,.0f}")
+    df_display = df_display[["MesAno", "Peso", "Faturamento", "Positivações"]]
     df_display.columns = ["Mês/Ano", "Peso Total", "Faturamento Total", "Positivações Totais"]
     st.dataframe(df_display, use_container_width=True)
 else:
