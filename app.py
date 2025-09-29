@@ -8,19 +8,15 @@ st.set_page_config(page_title="Análise das Marcas", layout="wide")
 # --- CSS PARA DARK MODE COMPLETO ---
 st.markdown("""
     <style>
-        /* Fundo geral da página */
+        /* Seu CSS aqui */
         .stApp {
             background-color: #0e1117 !important;
             color: white !important;
         }
-
-        /* Sidebar */
         section[data-testid="stSidebar"] {
             background-color: #1a1d23 !important;
             color: white !important;
         }
-
-        /* Widgets - selectbox, inputs, filtros */
         div[data-baseweb="select"] > div, div[data-baseweb="input"], div.stSelectbox {
             background-color: #1a1d23 !important;
             color: white !important;
@@ -28,30 +24,20 @@ st.markdown("""
         div[data-baseweb="select"] span {
             color: white !important;
         }
-
-        /* Labels */
         label, .stSelectbox label {
             color: white !important;
         }
-
-        /* DataFrame */
         .dataframe {
             color: white !important;
             background-color: #1a1d23 !important;
         }
-
-        /* Cabeçalhos */
         h1, h2, h3, h4, h5, h6 {
             color: white !important;
         }
-
-        /* Tooltips dos gráficos */
         div[role="tooltip"] {
             background-color: #1a1d23 !important;
             color: white !important;
         }
-
-        /* Scrollbars */
         ::-webkit-scrollbar {
             background: #0e1117;
         }
@@ -71,25 +57,39 @@ usuarios = {
     "15810": "18519!lobo"
 }
 
+# Usar session_state para manter login
+if "autenticado" not in st.session_state:
+    st.session_state.autenticado = False
+if "usuario" not in st.session_state:
+    st.session_state.usuario = ""
+
 # Login na sidebar
 st.sidebar.header("Login do Gerente")
-usuario_input = st.sidebar.text_input("Usuário")
-senha_input = st.sidebar.text_input("Senha", type="password")
-botao_login = st.sidebar.button("Entrar")
 
-# Variável para controlar autenticação
-autenticado = False
+if not st.session_state.autenticado:
+    usuario_input = st.sidebar.text_input("Usuário")
+    senha_input = st.sidebar.text_input("Senha", type="password")
+    botao_login = st.sidebar.button("Entrar")
 
-if botao_login:
-    if usuario_input in usuarios and senha_input == usuarios[usuario_input]:
-        autenticado = True
-        st.sidebar.success(f"Bem-vindo, {usuario_input}!")
-    else:
-        st.sidebar.error("Usuário ou senha incorretos.")
+    if botao_login:
+        if usuario_input in usuarios and senha_input == usuarios[usuario_input]:
+            st.session_state.autenticado = True
+            st.session_state.usuario = usuario_input
+            st.sidebar.success(f"Bem-vindo, {usuario_input}!")
+        else:
+            st.sidebar.error("Usuário ou senha incorretos.")
+else:
+    st.sidebar.success(f"Logado como: {st.session_state.usuario}")
+    if st.sidebar.button("Sair"):
+        st.session_state.autenticado = False
+        st.session_state.usuario = ""
+        st.experimental_rerun()
 
-if not autenticado:
+if not st.session_state.autenticado:
     st.warning("Por favor, faça login para acessar os dados.")
-    st.stop()  # Para não mostrar o restante da aplicação sem login
+    st.stop()
+
+usuario_input = st.session_state.usuario
 
 # TÍTULO
 st.title("📊 Análise das Marcas")
@@ -117,6 +117,10 @@ df.rename(columns={
 # Filtrar dados para mostrar só o gerente autenticado
 df = df[df["Gerente"] == usuario_input]
 
+if df.empty:
+    st.warning("Nenhum dado encontrado para o gerente autenticado.")
+    st.stop()
+
 df["Periodo"] = pd.to_datetime(df["Periodo"], errors="coerce")
 df["MesAnoOrd"] = df["Periodo"].dt.to_period("M").dt.to_timestamp()
 df["MesAno"] = df["Periodo"].dt.strftime("%b/%Y")
@@ -133,12 +137,25 @@ df_filtrado = filtro_selectbox("Gerente", df)  # Só terá o gerente autenticado
 df_filtrado = filtro_selectbox("Supervisor", df_filtrado)
 df_filtrado = filtro_selectbox("Representante", df_filtrado)
 
-meses = df[["MesAnoOrd", "MesAno"]].drop_duplicates().sort_values("MesAnoOrd")
+meses = df_filtrado[["MesAnoOrd", "MesAno"]].drop_duplicates().sort_values("MesAnoOrd")
+
+if meses.empty:
+    st.warning("Nenhum dado disponível para os filtros selecionados.")
+    st.stop()
+
 mes_inicio = st.sidebar.selectbox("Mês inicial", meses["MesAno"].tolist(), index=0)
 mes_fim = st.sidebar.selectbox("Mês final", meses["MesAno"].tolist(), index=len(meses)-1)
 
-inicio_ord = meses.loc[meses["MesAno"] == mes_inicio, "MesAnoOrd"].iloc[0]
-fim_ord = meses.loc[meses["MesAno"] == mes_fim, "MesAnoOrd"].iloc[0]
+# Garantir que os valores existem antes de pegar iloc[0]
+inicio_ord = meses.loc[meses["MesAno"] == mes_inicio, "MesAnoOrd"]
+fim_ord = meses.loc[meses["MesAno"] == mes_fim, "MesAnoOrd"]
+
+if inicio_ord.empty or fim_ord.empty:
+    st.warning("Seleção de mês inválida.")
+    st.stop()
+
+inicio_ord = inicio_ord.iloc[0]
+fim_ord = fim_ord.iloc[0]
 
 df_filtrado = df_filtrado[(df_filtrado["MesAnoOrd"] >= inicio_ord) & (df_filtrado["MesAnoOrd"] <= fim_ord)]
 
