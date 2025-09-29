@@ -47,14 +47,15 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Dicionário de usuários e senhas (exemplo)
+# Dicionário de usuários e senhas (exemplo) - CORRIJA senhas conforme necessário
 usuarios = {
     "15843": "15843!claudinei",
     "18182": "18182!enio",
     "19399": "19399!roger",
     "15972": "15972!gilberto",
     "18519": "18519!lobo",
-    "15810": "18519!lobo"
+    # Corrigi o que parecia um typo aqui:
+    "15810": "15810!lobo"
 }
 
 # Usar session_state para manter login
@@ -105,22 +106,62 @@ marca_selecionada = st.sidebar.selectbox("Marca", abas, index=0)
 # CARREGAMENTO DE DADOS
 df = pd.read_excel(arquivo, sheet_name=marca_selecionada)
 
-df.rename(columns={
-    df.columns[0]: "Gerente",
-    df.columns[2]: "Representante",
-    df.columns[3]: "Periodo",
-    df.columns[5]: "Peso",
-    df.columns[6]: "Faturamento",
-    df.columns[7]: "Supervisor"
-}, inplace=True)
+# --------- Normalizações / renomeações robustas ----------
+def find_col(df, keywords):
+    for col in df.columns:
+        for k in keywords:
+            if k.lower() in col.lower():
+                return col
+    return None
 
-# Filtrar dados para mostrar só o gerente autenticado
+# Garantir que existe a coluna 'Gerente' (ou encontrá-la por substring) e converter para string
+if 'Gerente' not in df.columns:
+    candidate = find_col(df, ['gerente', 'ger/'])
+    if candidate:
+        df.rename(columns={candidate: 'Gerente'}, inplace=True)
+
+if 'Gerente' not in df.columns:
+    st.error("Coluna 'Gerente' não encontrada no arquivo. Verifique o Excel.")
+    st.stop()
+
+# **Importante**: converter para string para evitar mismatch com o input de texto
+df['Gerente'] = df['Gerente'].astype(str).str.strip()
+
+# Renomear outras colunas encontradas (mais robusto que usar positions)
+mappings = {}
+rep_col = find_col(df, ['represent', 'representa', 'represen'])
+if rep_col:
+    mappings[rep_col] = 'Representante'
+periodo_col = find_col(df, ['periodo', 'data', 'mês'])
+if periodo_col:
+    mappings[periodo_col] = 'Periodo'
+peso_col = find_col(df, ['peso'])
+if peso_col:
+    mappings[peso_col] = 'Peso'
+fat_col = find_col(df, ['fatur', 'faturamento', 'receita'])
+if fat_col:
+    mappings[fat_col] = 'Faturamento'
+sup_col = find_col(df, ['supervisor', 'sup'])
+if sup_col:
+    mappings[sup_col] = 'Supervisor'
+
+if mappings:
+    df.rename(columns=mappings, inplace=True)
+
+# Check colunas mínimas
+for c in ['Periodo', 'Peso', 'Faturamento']:
+    if c not in df.columns:
+        st.error(f"Coluna obrigatória '{c}' não encontrada — colunas detectadas: {', '.join(df.columns)}")
+        st.stop()
+
+# Filtrar dados para mostrar só o gerente autenticado (agora a comparação é entre strings)
 df = df[df["Gerente"] == usuario_input]
 
 if df.empty:
     st.warning("Nenhum dado encontrado para o gerente autenticado.")
     st.stop()
 
+# resto do processamento (periodo, agregações e gráficos) inalterado
 df["Periodo"] = pd.to_datetime(df["Periodo"], errors="coerce")
 df["MesAnoOrd"] = df["Periodo"].dt.to_period("M").dt.to_timestamp()
 df["MesAno"] = df["Periodo"].dt.strftime("%b/%Y")
@@ -129,13 +170,20 @@ df["MesAno"] = df["Periodo"].dt.strftime("%b/%Y")
 st.sidebar.header("Filtros")
 
 def filtro_selectbox(coluna, df_input):
-    opcoes = ["Todos"] + df_input[coluna].dropna().unique().tolist()
+    opcoes = ["Todos"] + sorted(df_input[coluna].dropna().unique().tolist())
     selecao = st.sidebar.selectbox(coluna, opcoes)
     return df_input if selecao == "Todos" else df_input[df_input[coluna] == selecao]
 
-df_filtrado = filtro_selectbox("Gerente", df)  # Só terá o gerente autenticado
-df_filtrado = filtro_selectbox("Supervisor", df_filtrado)
-df_filtrado = filtro_selectbox("Representante", df_filtrado)
+# como o df já foi filtrado pelo gerente autenticado, este select terá apenas opções desse gerente
+if "Gerente" in df.columns:
+    df_filtrado = filtro_selectbox("Gerente", df)
+else:
+    df_filtrado = df
+
+if "Supervisor" in df.columns:
+    df_filtrado = filtro_selectbox("Supervisor", df_filtrado)
+if "Representante" in df_filtrado.columns:
+    df_filtrado = filtro_selectbox("Representante", df_filtrado)
 
 meses = df_filtrado[["MesAnoOrd", "MesAno"]].drop_duplicates().sort_values("MesAnoOrd")
 
