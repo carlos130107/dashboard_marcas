@@ -128,17 +128,21 @@ df.rename(columns={
 # Mapear usuário para nome do gerente original
 usuario_para_nome = {nome.replace(" ", ""): nome for nome in nomes_gerentes}
 
-# Se for usuário coringa, não filtra por gerente
+# --- FILTRO GERENTE (aparece só para admin) ---
 if usuario_autenticado == "admin":
-    nome_gerente_autenticado = None  # sinaliza acesso total
+    # Para admin, mostrar filtro Gerente no sidebar
+    st.sidebar.header("Filtro Gerente")
+    opcoes_gerente = ["Todos"] + sorted(df["Nome Gerente"].dropna().unique().tolist())
+    gerente_selecionado = st.sidebar.selectbox("Gerente", opcoes_gerente, index=0)
+    if gerente_selecionado != "Todos":
+        df = df[df["Nome Gerente"] == gerente_selecionado]
+    nome_gerente_autenticado = None  # admin tem acesso total (ou filtrado pelo filtro acima)
 else:
+    # Para outros usuários, filtrar automaticamente pelo gerente autenticado
     nome_gerente_autenticado = usuario_para_nome.get(usuario_autenticado)
     if nome_gerente_autenticado is None:
         st.error("Erro: gerente não encontrado.")
         st.stop()
-
-# Filtrar dados para mostrar só o gerente autenticado (usando "Nome Gerente"), exceto para admin
-if nome_gerente_autenticado is not None:
     df = df[df["Nome Gerente"] == nome_gerente_autenticado]
 
 # Converter datas e criar colunas auxiliares
@@ -157,7 +161,7 @@ def filtro_selectbox(coluna, df_input):
     else:
         return df_input[df_input[coluna] == selecao]
 
-# Aplicar filtros dentro dos dados do gerente autenticado
+# Aplicar filtros dentro dos dados já filtrados por gerente
 df_filtrado = df.copy()
 
 # Filtro Supervisor
@@ -174,7 +178,6 @@ if df_filtrado.empty:
     st.stop()
 
 # Agrupar dados para gráficos e tabela
-# Usar o nome correto da coluna "Positivações"
 df_grouped = df_filtrado.groupby(["MesAnoOrd", "MesAno"], as_index=False).agg({
     "Peso": "sum",
     "Faturamento": "sum",
