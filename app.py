@@ -3,9 +3,12 @@ import pandas as pd
 import altair as alt
 
 # CONFIGURAÇÕES DA PÁGINA
-st.set_page_config(page_title="📈 Análise das Marcas", layout="wide")
+st.set_page_config(
+    page_title="Análise das Marcas",
+    page_icon= "📈",
+    layout="wide")
 
-# --- CSS PARA DARK MODE COMPLETO ---
+# CSS PARA DARK MODE COMPLETO
 st.markdown("""
     <style>
         /* Seu CSS aqui (mantido igual) */
