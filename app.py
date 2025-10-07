@@ -5,7 +5,7 @@ import altair as alt
 # CONFIGURAÇÕES DA PÁGINA
 st.set_page_config(
     page_title="Análise das Marcas",
-    page_icon= "📈",
+    page_icon= "grafic.png",
     layout="wide")
 
 # CSS PARA DARK MODE COMPLETO
